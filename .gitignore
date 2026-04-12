@@ -1,0 +1,54 @@
+# Documentation
+*.md
+!README.md
+
+# System / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+target/
+unpackage/
+*.jar
+*.war
+*.ear
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment local overrides
+.env.local
+.env.*.local
+*.local
+
+# Caches
+.cache/
+.parcel-cache/
+dist-ssr/
+
+# Uni-app
+.hbuilderx/
+
+# Lockfiles
+pnpm-lock.yaml
+package-lock.json
+
+# Archives / local assets
+*.zip
+html/*.dmg

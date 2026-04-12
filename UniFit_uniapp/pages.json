@@ -1,0 +1,195 @@
+{
+  "pages": [
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "UniFit 登录"
+      }
+    },
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "UniFit"
+      }
+    },
+    {
+      "path": "pages/profile/profile",
+      "style": {
+        "navigationBarTitleText": "健康档案"
+      }
+    },
+    {
+      "path": "pages/test/test",
+      "style": {
+        "navigationBarTitleText": "体测成绩"
+      }
+    },
+    {
+      "path": "pages/plan/plan",
+      "style": {
+        "navigationBarTitleText": "训练计划"
+      }
+    },
+    {
+      "path": "pages/plan/history",
+      "style": {
+        "navigationBarTitleText": "历史计划"
+      }
+    },
+    {
+      "path": "pages/plan/current",
+      "style": {
+        "navigationBarTitleText": "计划详情"
+      }
+    },
+    {
+      "path": "pages/mine/mine",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/mine/edit-profile",
+      "style": {
+        "navigationBarTitleText": "编辑资料"
+      }
+    },
+    {
+      "path": "pages/mine/student-verify",
+      "style": {
+        "navigationBarTitleText": "学生身份认证"
+      }
+    },
+    {
+      "path": "pages/mine/health-profile",
+      "style": {
+        "navigationBarTitleText": "健康档案"
+      }
+    },
+    {
+      "path": "pages/mine/wallet",
+      "style": {
+        "navigationBarTitleText": "余额钱包",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/mine/order-records",
+      "style": {
+        "navigationBarTitleText": "购买记录"
+      }
+    },
+    {
+      "path": "pages/checkin/checkin",
+      "style": {
+        "navigationBarTitleText": "打卡与排行"
+      }
+    },
+    {
+      "path": "pages/exercise/list",
+      "style": {
+        "navigationBarTitleText": "动作库"
+      }
+    },
+    {
+      "path": "pages/exercise/detail",
+      "style": {
+        "navigationBarTitleText": "动作详情"
+      }
+    },
+    {
+      "path": "pages/exercise/my",
+      "style": {
+        "navigationBarTitleText": "我的互动"
+      }
+    },
+    {
+      "path": "pages/message/message",
+      "style": {
+        "navigationBarTitleText": "咨询留言"
+      }
+    },
+    {
+      "path": "pages/admin/dashboard",
+      "style": {
+        "navigationBarTitleText": "管理看板"
+      }
+    },
+    {
+      "path": "pages/admin/students",
+      "style": {
+        "navigationBarTitleText": "学生审核"
+      }
+    },
+    {
+      "path": "pages/admin/users",
+      "style": {
+        "navigationBarTitleText": "用户管理"
+      }
+    },
+    {
+      "path": "pages/admin/messages",
+      "style": {
+        "navigationBarTitleText": "留言回复"
+      }
+    },
+    {
+      "path": "pages/admin/exercises",
+      "style": {
+        "navigationBarTitleText": "动作管理"
+      }
+    },
+    {
+      "path": "pages/admin/templates",
+      "style": {
+        "navigationBarTitleText": "模板管理"
+      }
+    },
+    {
+      "path": "pages/admin/standards",
+      "style": {
+        "navigationBarTitleText": "标准管理"
+      }
+    }
+  ],
+  "easycom": {
+    "^uni-(.*)": "@/uni_modules/uni-$1/components/uni-$1/uni-$1.vue"
+  },
+  "tabBar": {
+    "color": "#94a3b8",
+    "selectedColor": "#F97316",
+    "borderStyle": "white",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/icon_uni/shouye.png",
+        "selectedIconPath": "static/icon_uni/shouye.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "健康",
+        "iconPath": "static/icon_uni/bingli.png",
+        "selectedIconPath": "static/icon_uni/bingli.png"
+      },
+      {
+        "pagePath": "pages/plan/plan",
+        "text": "计划",
+        "iconPath": "static/icon_uni/rili.png",
+        "selectedIconPath": "static/icon_uni/rili.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "static/icon_uni/wode.png",
+        "selectedIconPath": "static/icon_uni/wode.png"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f5f7"
+  }
+}
