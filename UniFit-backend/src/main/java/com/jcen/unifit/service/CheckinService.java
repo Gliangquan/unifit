@@ -10,7 +10,7 @@ import java.util.Map;
 
 public interface CheckinService {
 
-    boolean checkin(User loginUser, CheckinRequest request);
+    Map<String, Object> checkin(User loginUser, CheckinRequest request);
 
     int getStreakDays(User loginUser);
 

@@ -23,6 +23,8 @@ public class StudentProfile {
 
     private String className;
 
+    private Long classId;
+
     private String verificationStatus;
 
     private String rejectReason;

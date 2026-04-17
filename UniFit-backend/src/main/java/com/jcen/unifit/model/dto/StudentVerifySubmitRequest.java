@@ -10,4 +10,6 @@ public class StudentVerifySubmitRequest {
     private String realName;
 
     private String className;
+
+    private Long classId;
 }

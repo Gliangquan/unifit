@@ -8,6 +8,7 @@ import com.jcen.unifit.model.dto.StudentAuditRequest;
 import com.jcen.unifit.model.dto.StudentVerifySubmitRequest;
 import com.jcen.unifit.model.entity.StudentProfile;
 import com.jcen.unifit.model.entity.User;
+import com.jcen.unifit.model.vo.ClassVO;
 import com.jcen.unifit.service.StudentService;
 import com.jcen.unifit.service.UserService;
 import org.springframework.web.bind.annotation.*;
@@ -38,10 +39,21 @@ public class StudentController {
         return ResultUtils.success(studentService.getMyProfile(loginUser));
     }
 
+    @GetMapping("/classes")
+    public BaseResponse<List<ClassVO>> listAvailableClasses() {
+        return ResultUtils.success(studentService.listAvailableClasses());
+    }
+
     @GetMapping("/verify/pending")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<List<StudentProfile>> listPending() {
         return ResultUtils.success(studentService.listPendingProfiles());
+    }
+
+    @GetMapping("/verify/history")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<List<StudentProfile>> listAuditHistory() {
+        return ResultUtils.success(studentService.listAuditHistoryProfiles());
     }
 
     @PostMapping("/verify/audit")

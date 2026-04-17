@@ -88,20 +88,22 @@ import { ensureLogin } from '@/common/auth'
 
 const categoryOptions = [
   { label: '全部类型', value: '' },
-  { label: '上肢', value: 'upper' },
-  { label: '下肢', value: 'lower' },
-  { label: '核心', value: 'core' },
-  { label: '有氧', value: 'cardio' },
-  { label: '恢复', value: 'recovery' }
+  { label: '上肢', value: '上肢' },
+  { label: '下肢', value: '下肢' },
+  { label: '核心', value: '核心' },
+  { label: '有氧', value: '有氧' },
+  { label: '有氧操', value: '有氧操' },
+  { label: '恢复', value: '恢复' },
+  { label: '八段锦', value: '八段锦' },
+  { label: '瑜伽', value: '瑜伽' }
 ]
 
 const difficultyOptions = [
   { label: '全部等级', value: '' },
-  { label: '零基础', value: 'newbie' },
-  { label: '初级', value: 'beginner' },
-  { label: '进阶', value: 'intermediate' },
-  { label: '强化', value: 'advanced' },
-  { label: '高级', value: 'advanced' }
+  { label: '零基础', value: '零基础' },
+  { label: '初级', value: '初级' },
+  { label: '进阶', value: '进阶' },
+  { label: '强化', value: '强化' }
 ]
 
 export default {
@@ -150,22 +152,34 @@ export default {
       const map = {
         upper: '上肢',
         upper_body: '上肢',
+        '上肢': '上肢',
         lower: '下肢',
         lower_body: '下肢',
+        '下肢': '下肢',
         core: '核心',
+        '核心': '核心',
         cardio: '有氧',
         aerobic: '有氧',
-        recovery: '恢复'
+        '有氧': '有氧',
+        '有氧操': '有氧操',
+        recovery: '恢复',
+        '恢复': '恢复',
+        '八段锦': '八段锦',
+        '瑜伽': '瑜伽'
       }
       return map[value] || value || '未分类'
     },
     difficultyText(value) {
       const map = {
         newbie: '零基础',
+        '零基础': '零基础',
         beginner: '初级',
         basic: '初级',
+        '初级': '初级',
         intermediate: '进阶',
-        advanced: '强化'
+        '进阶': '进阶',
+        advanced: '强化',
+        '强化': '强化'
       }
       return map[value] || value || '未分级'
     },

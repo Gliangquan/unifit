@@ -102,7 +102,7 @@
 
 <script>
 import { request } from '@/common/request'
-import { ensureLogin, setUser } from '@/common/auth'
+import { ensureLogin, setUser, getUser } from '@/common/auth'
 import { resolveAssetUrl } from '@/common/asset'
 
 export default {
@@ -252,7 +252,28 @@ export default {
         success: async (res) => {
           if (res.confirm) {
             await request({ url: '/user/logout', method: 'POST', showError: false }).catch(() => null)
-            uni.clearStorageSync()
+            const currentUser = getUser() || {}
+            if (currentUser.id) {
+              const purchaseOrders = uni.getStorageSync(`purchase_orders_${currentUser.id}`)
+              const walletTransactions = uni.getStorageSync(`wallet_transactions_${currentUser.id}`)
+              const courseUnlockKeys = []
+              const storageInfo = uni.getStorageInfoSync()
+              ;(storageInfo.keys || []).forEach(key => {
+                if (key.indexOf(`course_unlock_${currentUser.id}_`) === 0) {
+                  courseUnlockKeys.push({ key, value: uni.getStorageSync(key) })
+                }
+              })
+              uni.clearStorageSync()
+              if (purchaseOrders) {
+                uni.setStorageSync(`purchase_orders_${currentUser.id}`, purchaseOrders)
+              }
+              if (walletTransactions) {
+                uni.setStorageSync(`wallet_transactions_${currentUser.id}`, walletTransactions)
+              }
+              courseUnlockKeys.forEach(item => uni.setStorageSync(item.key, item.value))
+            } else {
+              uni.removeStorageSync('user')
+            }
             uni.reLaunch({ url: '/pages/login/login' })
           }
         }

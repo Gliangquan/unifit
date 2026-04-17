@@ -122,10 +122,18 @@ public class ExerciseServiceImpl implements ExerciseService {
             qw.and(w -> w.like("name", keyword).or().like("description", keyword));
         }
         if (StringUtils.isNotBlank(category)) {
-            qw.eq("category", category);
+            String normalizedCategory = normalizeCategory(category);
+            qw.and(w -> w.eq("category", category));
+            if (!normalizedCategory.equals(category)) {
+                qw.or().eq("category", normalizedCategory);
+            }
         }
         if (StringUtils.isNotBlank(difficulty)) {
-            qw.eq("difficulty", difficulty);
+            String normalizedDifficulty = normalizeDifficulty(difficulty);
+            qw.and(w -> w.eq("difficulty", difficulty));
+            if (!normalizedDifficulty.equals(difficulty)) {
+                qw.or().eq("difficulty", normalizedDifficulty);
+            }
         }
         qw.eq("status", 1).orderByAsc("id");
         Page<Exercise> page = exerciseMapper.selectPage(new Page<>(current, pageSize), qw);
@@ -416,6 +424,63 @@ public class ExerciseServiceImpl implements ExerciseService {
         }
         vo.setExerciseName(exercise.getName());
         vo.setExerciseCoverImageUrl(exercise.getCoverImageUrl());
+    }
+
+    private String normalizeCategory(String category) {
+        if (StringUtils.isBlank(category)) {
+            return "";
+        }
+        switch (category.trim().toLowerCase()) {
+            case "upper":
+            case "upper_body":
+            case "上肢":
+                return "上肢";
+            case "lower":
+            case "lower_body":
+            case "下肢":
+                return "下肢";
+            case "core":
+            case "核心":
+                return "核心";
+            case "cardio":
+            case "aerobic":
+            case "有氧":
+                return "有氧";
+            case "recovery":
+            case "恢复":
+                return "恢复";
+            case "有氧操":
+                return "有氧操";
+            case "八段锦":
+                return "八段锦";
+            case "瑜伽":
+                return "瑜伽";
+            default:
+                return category.trim();
+        }
+    }
+
+    private String normalizeDifficulty(String difficulty) {
+        if (StringUtils.isBlank(difficulty)) {
+            return "";
+        }
+        switch (difficulty.trim().toLowerCase()) {
+            case "newbie":
+            case "零基础":
+                return "newbie";
+            case "beginner":
+            case "basic":
+            case "初级":
+                return "初级";
+            case "intermediate":
+            case "进阶":
+                return "进阶";
+            case "advanced":
+            case "强化":
+                return "强化";
+            default:
+                return difficulty.trim();
+        }
     }
 
     private void fillPublishUserName(List<Exercise> exercises) {

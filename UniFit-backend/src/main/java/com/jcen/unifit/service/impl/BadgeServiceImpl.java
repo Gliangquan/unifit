@@ -14,8 +14,11 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -79,5 +82,32 @@ public class BadgeServiceImpl implements BadgeService {
     @Override
     public List<UserBadge> listMyBadgeRecords(User loginUser) {
         return userBadgeMapper.selectList(new QueryWrapper<UserBadge>().eq("user_id", loginUser.getId()).orderByDesc("achieved_date"));
+    }
+
+    @Override
+    public List<Map<String, Object>> listBadgeWall(User loginUser) {
+        List<Badge> allBadges = badgeMapper.selectList(new QueryWrapper<Badge>()
+                .eq("status", 1)
+                .orderByAsc("id"));
+        List<UserBadge> records = listMyBadgeRecords(loginUser);
+        Map<Long, UserBadge> recordMap = new HashMap<>();
+        for (UserBadge record : records) {
+            if (record.getBadgeId() != null) {
+                recordMap.put(record.getBadgeId(), record);
+            }
+        }
+        return allBadges.stream().sorted(Comparator.comparing(Badge::getId)).map(badge -> {
+            UserBadge record = recordMap.get(badge.getId());
+            Map<String, Object> row = new HashMap<>();
+            row.put("id", badge.getId());
+            row.put("badgeCode", badge.getBadgeCode());
+            row.put("badgeName", badge.getBadgeName());
+            row.put("iconUrl", badge.getIconUrl());
+            row.put("conditionType", badge.getConditionType());
+            row.put("conditionValue", badge.getConditionValue());
+            row.put("unlocked", record != null);
+            row.put("achievedDate", record == null ? null : record.getAchievedDate());
+            return row;
+        }).collect(Collectors.toList());
     }
 }

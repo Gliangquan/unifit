@@ -62,4 +62,14 @@ public interface AdminService {
      * 获取用户活跃度统计
      */
     Map<String, Object> getUserActivityStats();
+
+    /**
+     * 获取数据分析总览
+     */
+    Map<String, Object> getAnalysisOverview();
+
+    /**
+     * 获取班级对比分析数据
+     */
+    List<Map<String, Object>> getClassComparisonData();
 }

@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class PlanItemVO {
 
+    private Long id;
+
     private Integer weekNo;
 
     private Integer dayNo;
@@ -22,4 +24,6 @@ public class PlanItemVO {
     private String intensityNote;
 
     private Integer completed;
+
+    private java.util.Date completeTime;
 }

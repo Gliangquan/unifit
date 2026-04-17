@@ -1,48 +1,29 @@
 <template>
   <div class="dashboard-container">
-    <!-- Admin Dashboard -->
     <template v-if="isAdmin">
-      <!-- 关键指标卡片 -->
       <a-row :gutter="16" class="metrics-row">
         <a-col :xs="24" :sm="12" :lg="6">
           <a-card class="metric-card">
-            <a-statistic 
-              title="学生总数" 
-              :value="stats.studentCount"
-              :value-style="{ color: '#1890ff' }"
-            />
+            <a-statistic title="学生总数" :value="stats.studentCount" :value-style="{ color: '#1890ff' }" />
           </a-card>
         </a-col>
         <a-col :xs="24" :sm="12" :lg="6">
           <a-card class="metric-card">
-            <a-statistic 
-              title="打卡率" 
-              :value="stats.checkinRate"
-              :value-style="{ color: '#52c41a' }"
-            />
+            <a-statistic title="打卡率" :value="stats.checkinRate" :value-style="{ color: '#52c41a' }" />
           </a-card>
         </a-col>
         <a-col :xs="24" :sm="12" :lg="6">
           <a-card class="metric-card">
-            <a-statistic 
-              title="认证率" 
-              :value="stats.verificationRate"
-              :value-style="{ color: '#faad14' }"
-            />
+            <a-statistic title="认证率" :value="stats.verificationRate" :value-style="{ color: '#faad14' }" />
           </a-card>
         </a-col>
         <a-col :xs="24" :sm="12" :lg="6">
           <a-card class="metric-card">
-            <a-statistic 
-              title="待审核" 
-              :value="stats.pendingStudentAudit"
-              :value-style="{ color: '#f5222d' }"
-            />
+            <a-statistic title="待审核" :value="stats.pendingStudentAudit" :value-style="{ color: '#f5222d' }" />
           </a-card>
         </a-col>
       </a-row>
 
-      <!-- 详细统计 -->
       <a-row :gutter="16" style="margin-top: 16px;">
         <a-col :xs="24" :sm="12" :lg="6">
           <a-card class="stat-card">
@@ -78,16 +59,12 @@
         </a-col>
       </a-row>
 
-      <!-- 图表区域 -->
       <a-row :gutter="16" style="margin-top: 16px;">
-        <!-- 打卡趋势 -->
         <a-col :xs="24" :lg="12">
           <a-card title="打卡趋势（最近7天）" :loading="chartLoading">
             <div id="checkinTrendChart" style="height: 300px;"></div>
           </a-card>
         </a-col>
-
-        <!-- 体测项目分布 -->
         <a-col :xs="24" :lg="12">
           <a-card title="体测项目分布" :loading="chartLoading">
             <div id="testDistributionChart" style="height: 300px;"></div>
@@ -95,17 +72,11 @@
         </a-col>
       </a-row>
 
-      <!-- 班级排行榜 -->
       <a-row :gutter="16" style="margin-top: 16px;">
         <a-col :xs="24">
           <a-card title="班级排行榜（最近7天）" :loading="tableLoading">
-            <a-table 
-              :columns="classColumns"
-              :data-source="classRanking"
-              :pagination="false"
-              size="small"
-            >
-              <template #bodyCell="{ column, record, index }">
+            <a-table :columns="classColumns" :data-source="classRanking" :pagination="false" size="small">
+              <template #bodyCell="{ column, index }">
                 <template v-if="column.key === 'rank'">
                   <a-tag :color="getRankColor(index)">{{ index + 1 }}</a-tag>
                 </template>
@@ -115,7 +86,6 @@
         </a-col>
       </a-row>
 
-      <!-- 数据导出 -->
       <a-row :gutter="16" style="margin-top: 16px;">
         <a-col :xs="24">
           <a-card title="数据导出">
@@ -128,58 +98,34 @@
       </a-row>
     </template>
 
-    <!-- Teacher Dashboard -->
     <template v-else>
-      <!-- 教师统计卡片 -->
       <a-row :gutter="16" class="metrics-row">
         <a-col :xs="24" :sm="12" :lg="6">
           <a-card class="metric-card">
-            <a-statistic 
-              title="我的班级数" 
-              :value="teacherStats.classCount"
-              :value-style="{ color: '#1890ff' }"
-            />
+            <a-statistic title="我的班级数" :value="teacherStats.classCount" :value-style="{ color: '#1890ff' }" />
           </a-card>
         </a-col>
         <a-col :xs="24" :sm="12" :lg="6">
           <a-card class="metric-card">
-            <a-statistic 
-              title="班级学生数" 
-              :value="teacherStats.studentCount"
-              :value-style="{ color: '#52c41a' }"
-            />
+            <a-statistic title="班级学生数" :value="teacherStats.studentCount" :value-style="{ color: '#52c41a' }" />
           </a-card>
         </a-col>
         <a-col :xs="24" :sm="12" :lg="6">
           <a-card class="metric-card">
-            <a-statistic 
-              title="班级打卡率" 
-              :value="teacherStats.checkinRate"
-              :value-style="{ color: '#faad14' }"
-            />
+            <a-statistic title="班级打卡率" :value="teacherStats.checkinRate" :value-style="{ color: '#faad14' }" />
           </a-card>
         </a-col>
         <a-col :xs="24" :sm="12" :lg="6">
           <a-card class="metric-card">
-            <a-statistic 
-              title="班级认证率" 
-              :value="teacherStats.verificationRate"
-              :value-style="{ color: '#f5222d' }"
-            />
+            <a-statistic title="班级认证率" :value="teacherStats.verificationRate" :value-style="{ color: '#f5222d' }" />
           </a-card>
         </a-col>
       </a-row>
 
-      <!-- 教师班级列表 -->
       <a-row :gutter="16" style="margin-top: 16px;">
         <a-col :xs="24">
           <a-card title="我的班级" :loading="tableLoading">
-            <a-table 
-              :columns="teacherClassColumns"
-              :data-source="teacherClasses"
-              :pagination="false"
-              size="small"
-            />
+            <a-table :columns="teacherClassColumns" :data-source="teacherClasses" :pagination="false" size="small" />
           </a-card>
         </a-col>
       </a-row>
@@ -188,16 +134,16 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, nextTick, computed } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import * as echarts from 'echarts';
-import { 
-  getDashboardDetail, 
-  getCheckinTrend, 
-  getClassRanking, 
-  getTestDistribution,
+import {
+  exportClassChallengeCsv,
+  exportUserScoresCsv,
   getActivityStats,
-  exportUserScoresCsv, 
-  exportClassChallengeCsv
+  getCheckinTrend,
+  getClassRanking,
+  getDashboardDetail,
+  getTestDistribution,
 } from '../../api';
 import { getClassList } from '../../api/modules/class';
 
@@ -223,7 +169,6 @@ const teacherStats = reactive({
 });
 
 const teacherClasses = ref([]);
-
 const classRanking = ref([]);
 const chartLoading = ref(false);
 const tableLoading = ref(false);
@@ -248,6 +193,10 @@ const isAdmin = computed(() => {
   return user.userRole === 'admin';
 });
 
+let checkinTrendChart = null;
+let testDistributionChart = null;
+const resizeHandlers = [];
+
 const getRankColor = (index) => {
   if (index === 0) return 'gold';
   if (index === 1) return 'silver';
@@ -255,127 +204,83 @@ const getRankColor = (index) => {
   return 'default';
 };
 
-const loadDashboard = async () => {
-  try {
-    const res = await getDashboardDetail();
-    if (res) {
-      Object.assign(stats, res);
-    }
-  } catch (error) {
-    console.error('Failed to load dashboard detail:', error);
+const toPayload = (res) => {
+  if (res && typeof res === 'object' && 'data' in res) {
+    return res.data;
   }
+  return res;
 };
 
-const loadActivityStats = async () => {
-  try {
-    const res = await getActivityStats();
-    if (res) {
-      Object.assign(activityStats, res);
-    }
-  } catch (error) {
-    console.error('Failed to load activity stats:', error);
-  }
+const loadDashboard = async () => {
+  const res = await getDashboardDetail();
+  Object.assign(stats, toPayload(res) || {});
+};
+
+const loadActivity = async () => {
+  const res = await getActivityStats();
+  Object.assign(activityStats, toPayload(res) || {});
 };
 
 const loadClassRanking = async () => {
   tableLoading.value = true;
   try {
     const res = await getClassRanking();
-    classRanking.value = res || [];
-  } catch (error) {
-    console.error('Failed to load class ranking:', error);
+    classRanking.value = toPayload(res) || [];
   } finally {
     tableLoading.value = false;
   }
 };
 
-const drawCheckinTrendChart = async () => {
-  try {
-    const res = await getCheckinTrend();
-    const data = res || [];
-    
-    await nextTick();
-    const chartDom = document.getElementById('checkinTrendChart');
-    if (!chartDom) {
-      console.error('Chart DOM not found');
-      return;
-    }
+const bindResize = (chart) => {
+  const handler = () => chart?.resize();
+  window.addEventListener('resize', handler);
+  resizeHandlers.push(handler);
+};
 
-    const chart = echarts.init(chartDom);
-    const option = {
-      tooltip: { trigger: 'axis' },
-      xAxis: {
-        type: 'category',
-        data: data.map(item => item.date),
-      },
-      yAxis: { type: 'value' },
-      series: [
-        {
-          data: data.map(item => item.count),
-          type: 'line',
-          smooth: true,
-          itemStyle: { color: '#1890ff' },
-          areaStyle: { color: 'rgba(24, 144, 255, 0.2)' },
-        },
-      ],
-    };
-    chart.setOption(option);
-    window.addEventListener('resize', () => chart.resize());
-  } catch (error) {
-    console.error('Failed to draw checkin trend chart:', error);
-  }
+const drawCheckinTrendChart = async () => {
+  const res = await getCheckinTrend();
+  const data = toPayload(res) || [];
+  await nextTick();
+  const dom = document.getElementById('checkinTrendChart');
+  if (!dom) return;
+  checkinTrendChart?.dispose();
+  checkinTrendChart = echarts.init(dom);
+  checkinTrendChart.setOption({
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: data.map((item) => item.date) },
+    yAxis: { type: 'value' },
+    series: [{ data: data.map((item) => item.count || 0), type: 'line', smooth: true, itemStyle: { color: '#1890ff' }, areaStyle: { color: 'rgba(24, 144, 255, 0.2)' } }],
+  });
+  bindResize(checkinTrendChart);
 };
 
 const drawTestDistributionChart = async () => {
-  try {
-    const res = await getTestDistribution();
-    const data = res || [];
-    
-    await nextTick();
-    const chartDom = document.getElementById('testDistributionChart');
-    if (!chartDom) {
-      console.error('Chart DOM not found');
-      return;
-    }
+  const res = await getTestDistribution();
+  const data = toPayload(res) || [];
+  await nextTick();
+  const dom = document.getElementById('testDistributionChart');
+  if (!dom) return;
+  testDistributionChart?.dispose();
+  testDistributionChart = echarts.init(dom);
+  testDistributionChart.setOption({
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: data.map((item) => item.itemCode) },
+    yAxis: { type: 'value' },
+    series: [{ data: data.map((item) => item.count || 0), type: 'bar', itemStyle: { color: '#52c41a' } }],
+  });
+  bindResize(testDistributionChart);
+};
 
-    const chart = echarts.init(chartDom);
-    const option = {
-      tooltip: { trigger: 'axis' },
-      xAxis: {
-        type: 'category',
-        data: data.map(item => item.itemCode),
-      },
-      yAxis: { type: 'value' },
-      series: [
-        {
-          data: data.map(item => item.count),
-          type: 'bar',
-          itemStyle: { color: '#52c41a' },
-        },
-      ],
-    };
-    chart.setOption(option);
-    window.addEventListener('resize', () => chart.resize());
-  } catch (error) {
-    console.error('Failed to draw test distribution chart:', error);
-  }
+const loadTeacherClasses = async () => {
+  const res = await getClassList();
+  const rows = toPayload(res) || [];
+  teacherClasses.value = rows;
+  teacherStats.classCount = rows.length;
+  teacherStats.studentCount = rows.reduce((sum, item) => sum + (item.studentCount || 0), 0);
 };
 
 const exportCsv = () => {
   window.open(exportUserScoresCsv(), '_blank');
-};
-
-const loadTeacherClasses = async () => {
-  try {
-    const res = await getClassList();
-    if (res) {
-      teacherClasses.value = res;
-      teacherStats.classCount = res.length;
-      teacherStats.studentCount = res.reduce((sum, cls) => sum + (cls.studentCount || 0), 0);
-    }
-  } catch (error) {
-    console.error('Failed to load teacher classes:', error);
-  }
 };
 
 const exportClassCsv = () => {
@@ -384,33 +289,28 @@ const exportClassCsv = () => {
 
 onMounted(async () => {
   if (isAdmin.value) {
-    // Admin dashboard
     chartLoading.value = true;
     try {
-      await Promise.all([
-        loadDashboard(),
-        loadActivityStats(),
-        loadClassRanking(),
-      ]);
-      
-      await nextTick();
-      
-      await Promise.all([
-        drawCheckinTrendChart(),
-        drawTestDistributionChart(),
-      ]);
+      await Promise.all([loadDashboard(), loadActivity(), loadClassRanking()]);
+      await Promise.all([drawCheckinTrendChart(), drawTestDistributionChart()]);
     } finally {
       chartLoading.value = false;
     }
-  } else {
-    // Teacher dashboard
-    tableLoading.value = true;
-    try {
-      await loadTeacherClasses();
-    } finally {
-      tableLoading.value = false;
-    }
+    return;
   }
+
+  tableLoading.value = true;
+  try {
+    await loadTeacherClasses();
+  } finally {
+    tableLoading.value = false;
+  }
+});
+
+onBeforeUnmount(() => {
+  resizeHandlers.forEach((handler) => window.removeEventListener('resize', handler));
+  checkinTrendChart?.dispose();
+  testDistributionChart?.dispose();
 });
 </script>
 
@@ -423,11 +323,7 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 
-.metric-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
+.metric-card,
 .stat-card {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);

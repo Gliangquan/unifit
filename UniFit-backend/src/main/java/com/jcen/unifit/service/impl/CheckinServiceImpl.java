@@ -7,10 +7,14 @@ import com.jcen.unifit.exception.BusinessException;
 import com.jcen.unifit.mapper.CheckinMapper;
 import com.jcen.unifit.mapper.StudentProfileMapper;
 import com.jcen.unifit.mapper.UserMapper;
+import com.jcen.unifit.mapper.UserPlanItemMapper;
+import com.jcen.unifit.mapper.UserPlanMapper;
 import com.jcen.unifit.model.dto.CheckinRequest;
 import com.jcen.unifit.model.entity.Checkin;
 import com.jcen.unifit.model.entity.StudentProfile;
 import com.jcen.unifit.model.entity.User;
+import com.jcen.unifit.model.entity.UserPlan;
+import com.jcen.unifit.model.entity.UserPlanItem;
 import com.jcen.unifit.model.vo.ClassChallengeVO;
 import com.jcen.unifit.model.vo.CheckinRankVO;
 import com.jcen.unifit.service.CheckinService;
@@ -44,8 +48,14 @@ public class CheckinServiceImpl implements CheckinService {
     @Resource
     private StudentProfileMapper studentProfileMapper;
 
+    @Resource
+    private UserPlanMapper userPlanMapper;
+
+    @Resource
+    private UserPlanItemMapper userPlanItemMapper;
+
     @Override
-    public boolean checkin(User loginUser, CheckinRequest request) {
+    public Map<String, Object> checkin(User loginUser, CheckinRequest request) {
         ensureStudentVerified(loginUser);
         if (request != null && request.getDurationMinutes() != null && request.getDurationMinutes() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "打卡时长必须大于0");
@@ -57,18 +67,49 @@ public class CheckinServiceImpl implements CheckinService {
 
         QueryWrapper<Checkin> qw = new QueryWrapper<>();
         qw.eq("user_id", loginUser.getId()).ge("checkin_date", start).lt("checkin_date", end);
-        if (checkinMapper.selectCount(qw) > 0) {
-            return true;
+        Checkin existing = checkinMapper.selectOne(qw.last("limit 1"));
+        if (existing != null) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("checkedIn", true);
+            result.put("alreadyCheckedIn", true);
+            result.put("checkinId", existing.getId());
+            result.put("userPlanId", existing.getUserPlanId());
+            return result;
+        }
+
+        Long userPlanId = request == null ? null : request.getUserPlanId();
+        if (userPlanId == null || userPlanId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请先选择进行中的训练计划后再打卡");
+        }
+        UserPlan userPlan = userPlanMapper.selectById(userPlanId);
+        if (userPlan == null || !loginUser.getId().equals(userPlan.getUserId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "训练计划不存在或无权限");
+        }
+        if (!"active".equals(userPlan.getStatus()) && !"completed".equals(userPlan.getStatus())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "当前训练计划状态不可打卡");
+        }
+        long completedCount = userPlanItemMapper.selectCount(new QueryWrapper<UserPlanItem>()
+                .eq("user_plan_id", userPlanId)
+                .eq("completed", 1));
+        if (completedCount <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请先完成至少一个训练动作后再打卡");
         }
 
         Checkin checkin = new Checkin();
         checkin.setUserId(loginUser.getId());
-        checkin.setUserPlanId(request == null ? null : request.getUserPlanId());
+        checkin.setUserPlanId(userPlanId);
         checkin.setDurationMinutes(request == null || request.getDurationMinutes() == null ? 60 : request.getDurationMinutes());
         checkin.setNote(request == null ? null : request.getNote());
         checkin.setCheckinDate(new Date());
         checkin.setCreateTime(new Date());
-        return checkinMapper.insert(checkin) > 0;
+        boolean saved = checkinMapper.insert(checkin) > 0;
+        Map<String, Object> result = new HashMap<>();
+        result.put("checkedIn", saved);
+        result.put("alreadyCheckedIn", false);
+        result.put("checkinId", checkin.getId());
+        result.put("userPlanId", userPlanId);
+        result.put("completedItemCount", completedCount);
+        return result;
     }
 
     @Override

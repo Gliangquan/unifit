@@ -13,8 +13,10 @@
         <uni-forms-item label="姓名" required>
           <uni-easyinput v-model="verifyForm.realName" placeholder="请输入姓名" />
         </uni-forms-item>
-        <uni-forms-item label="班级">
-          <uni-easyinput v-model="verifyForm.className" placeholder="请输入班级（如：软件工程2201）" />
+        <uni-forms-item label="选择班级" required>
+          <picker class="class-picker" :range="classOptions" range-key="label" @change="onClassChange">
+            <view class="picker-text">{{ selectedClassLabel }}</view>
+          </picker>
         </uni-forms-item>
       </uni-forms>
 
@@ -35,10 +37,12 @@ export default {
   data() {
     return {
       studentProfile: {},
+      classOptions: [],
       verifyForm: {
         studentId: '',
         realName: '',
-        className: ''
+        className: '',
+        classId: null
       }
     }
   },
@@ -50,23 +54,45 @@ export default {
         rejected: '已拒绝'
       }
       return map[this.studentProfile.verificationStatus] || '未提交'
+    },
+    selectedClassLabel() {
+      const row = this.classOptions.find(item => item.value === this.verifyForm.classId)
+      return row ? row.label : '请选择班级'
     }
   },
   async onShow() {
     if (!ensureLogin()) return
-    await this.loadProfile()
+    await Promise.all([this.loadClasses(), this.loadProfile()])
   },
   methods: {
+    async loadClasses() {
+      const rows = await request({ url: '/student/classes', showError: false }) || []
+      this.classOptions = rows.map(item => ({
+        label: item.className + (item.classCode ? `（${item.classCode}）` : ''),
+        value: item.id,
+        className: item.className
+      }))
+    },
     async loadProfile() {
       const data = await request({ url: '/student/profile/my', showError: false }) || {}
       this.studentProfile = data
       this.verifyForm.studentId = data.studentId || ''
       this.verifyForm.realName = data.realName || ''
       this.verifyForm.className = data.className || ''
+      this.verifyForm.classId = data.classId || null
+    },
+    onClassChange(e) {
+      const row = this.classOptions[Number(e.detail.value)]
+      this.verifyForm.classId = row ? row.value : null
+      this.verifyForm.className = row ? row.className : ''
     },
     async submitVerify() {
       if (!this.verifyForm.studentId || !this.verifyForm.realName) {
         uni.showToast({ title: '请填写学号和姓名', icon: 'none' })
+        return
+      }
+      if (!this.verifyForm.classId) {
+        uni.showToast({ title: '请选择班级', icon: 'none' })
         return
       }
       await request({
@@ -75,6 +101,7 @@ export default {
         data: {
           studentId: this.verifyForm.studentId,
           realName: this.verifyForm.realName,
+          classId: this.verifyForm.classId,
           className: this.verifyForm.className || ''
         }
       })
@@ -84,3 +111,17 @@ export default {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+.class-picker {
+  padding: 20rpx;
+  border: 1px solid #d7dde8;
+  border-radius: 16rpx;
+  background: #fff;
+}
+
+.picker-text {
+  color: #334155;
+  font-size: 28rpx;
+}
+</style>

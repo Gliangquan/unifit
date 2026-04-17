@@ -6,13 +6,13 @@
         <IdentityAudit />
       </a-tab-pane>
 
-      <!-- 用户账号审核 -->
-      <a-tab-pane key="account" tab="账号审核">
+      <!-- 账号流程说明 -->
+      <a-tab-pane key="account" tab="账号说明">
         <AccountAudit />
       </a-tab-pane>
 
-      <!-- 体测数据异常审核 -->
-      <a-tab-pane key="test-data" tab="体测数据审核">
+      <!-- 体测数据审核说明 -->
+      <a-tab-pane key="test-data" tab="体测数据说明">
         <TestDataAudit />
       </a-tab-pane>
 

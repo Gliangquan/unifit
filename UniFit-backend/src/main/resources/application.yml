@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${DATASOURCE_URL:jdbc:mysql://localhost:3306/unifit?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
     username: ${DATASOURCE_USERNAME:root}
-    password: ${DATASOURCE_PASSWORD:change-me}
+    password: ${DATASOURCE_PASSWORD:liangquan0302}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jackson:
@@ -42,7 +42,7 @@ logging:
     name: logs/application.log
 
 jwt:
-  secret: ${JWT_SECRET:change-me}
+  secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm-unifit-2026
   expiration: 86400000
 
 wechat:
@@ -53,6 +53,6 @@ wechat:
 minio:
   endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9000}
   public-endpoint: ${MINIO_PUBLIC_ENDPOINT:http://127.0.0.1:9000}
-  access-key: ${MINIO_ACCESS_KEY:change-me}
-  secret-key: ${MINIO_SECRET_KEY:change-me}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
   bucket: ${MINIO_BUCKET:unifit}

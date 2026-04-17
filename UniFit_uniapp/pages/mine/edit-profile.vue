@@ -164,7 +164,7 @@ export default {
 
       const user = uni.getStorageSync('user') || {}
       uni.uploadFile({
-        url: `${BASE_URL}/user/avatar/upload`,
+        url: `${BASE_URL}/user/avatar/upload?token=${encodeURIComponent(user.token || '')}`,
         filePath,
         name: 'file',
         header: user.token ? { Authorization: `Bearer ${user.token}` } : {},

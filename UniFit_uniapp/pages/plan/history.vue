@@ -17,6 +17,7 @@
             <view :class="['uf-pill', statusClass(plan.status)]">{{ statusText(plan.status) }}</view>
           </view>
           <view class="plan-sub">项目：{{ testItemLabel(plan.testItemCode) }} · 等级：{{ scoreLevelLabel(plan.scoreLevel) }}</view>
+          <view class="plan-sub">基础：{{ fitnessLevelLabel(plan.fitnessLevel) }} · 器械：{{ equipmentTypeLabel(plan.equipmentType) }}</view>
           <view class="plan-sub">周期：{{ formatDate(plan.startDate) }} ~ {{ formatDate(plan.endDate) }}</view>
           <view class="plan-sub">频率：每周 {{ plan.daysPerWeek || 0 }} 天 · 完成度：{{ progress(plan) }}</view>
           <view class="detail-tip">点击查看计划详情与关联课程</view>
@@ -125,6 +126,24 @@ export default {
         advanced: '高级'
       }
       return map[level] || '未知等级'
+    },
+    fitnessLevelLabel(level) {
+      const map = {
+        newbie: '初级',
+        beginner: '初级',
+        basic: '中级',
+        intermediate: '中级',
+        advanced: '高级'
+      }
+      return map[level] || level || '-'
+    },
+    equipmentTypeLabel(type) {
+      const map = {
+        bodyweight: '无器械',
+        track: '跑道',
+        gym: '健身房'
+      }
+      return map[type] || type || '-'
     },
     statusText(status) {
       const map = {

@@ -139,11 +139,7 @@ export default {
         { id: 'alipay', name: '支付宝', desc: '快速安全', icon: '🏦' },
         { id: 'card', name: '银行卡', desc: '储蓄卡/信用卡', icon: '🎫' }
       ],
-      transactions: [
-        { type: '充值', time: '2024-02-27 14:30', amount: 100 },
-        { type: '充值', time: '2024-02-26 10:15', amount: 50 },
-        { type: '消费', time: '2024-02-25 16:45', amount: -30 }
-      ]
+      transactions: []
     }
   },
   computed: {
@@ -169,10 +165,43 @@ export default {
     await this.loadUserBalance()
   },
   methods: {
-    async loadUserBalance() {
+    getTransactionKey() {
       const user = uni.getStorageSync('user') || {}
+      return `wallet_transactions_${user.id || 'guest'}`
+    },
+    saveTransaction(record) {
+      if (!record) return
+      const key = this.getTransactionKey()
+      const list = uni.getStorageSync(key) || []
+      list.unshift(record)
+      uni.setStorageSync(key, list.slice(0, 50))
+      this.transactions = uni.getStorageSync(key) || []
+    },
+    formatTime(value) {
+      const d = new Date(value)
+      const y = d.getFullYear()
+      const m = `${d.getMonth() + 1}`.padStart(2, '0')
+      const day = `${d.getDate()}`.padStart(2, '0')
+      const hh = `${d.getHours()}`.padStart(2, '0')
+      const mm = `${d.getMinutes()}`.padStart(2, '0')
+      return `${y}-${m}-${day} ${hh}:${mm}`
+    },
+    async loadUserBalance() {
+      const latest = await request({ url: '/user/get/login', showError: false }).catch(() => null)
+      const localUser = uni.getStorageSync('user') || {}
+      const user = { ...localUser, ...(latest || {}), token: localUser.token }
+      uni.setStorageSync('user', user)
       this.balance = Number(user.balance || 0)
       this.planUnlocked = Number(user.planUnlocked || 0)
+      this.transactions = uni.getStorageSync(this.getTransactionKey()) || []
+    },
+    syncUserStore(latestUser) {
+      const localUser = uni.getStorageSync('user') || {}
+      const merged = { ...localUser, ...(latestUser || {}), token: localUser.token }
+      uni.setStorageSync('user', merged)
+      this.balance = Number(merged.balance || 0)
+      this.planUnlocked = Number(merged.planUnlocked || 0)
+      return merged
     },
     selectAmount(amount) {
       this.selectedAmount = amount
@@ -189,30 +218,28 @@ export default {
         uni.showToast({ title: '请输入有效金额', icon: 'none' })
         return
       }
-
-      const amount = this.rechargeAmount
+      const amount = Number(this.rechargeAmount)
       const method = this.paymentMethods.find(m => m.id === this.selectedPaymentMethod)
-
       uni.showLoading({ title: '处理中...' })
-      
       try {
-        // 模拟充值流程，不处理实际逻辑
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        
-        uni.hideLoading()
-        uni.showToast({ title: '充值成功', icon: 'success' })
-        
-        // 重置表单
+        const latestUser = await request({
+          url: '/user/balance/recharge',
+          method: 'POST',
+          data: { amount }
+        })
+        this.syncUserStore(latestUser)
+        this.saveTransaction({
+          type: `充值-${(method && method.name) || '钱包'}`,
+          time: this.formatTime(Date.now()),
+          amount
+        })
         this.selectedAmount = null
         this.customAmount = ''
-        
-        // 延迟后返回
-        setTimeout(() => {
-          uni.navigateBack()
-        }, 1500)
+        uni.hideLoading()
+        uni.showToast({ title: '充值成功', icon: 'success' })
       } catch (error) {
         uni.hideLoading()
-        uni.showToast({ title: '充值失败，请重试', icon: 'none' })
+        uni.showToast({ title: (error && error.message) || '充值失败，请重试', icon: 'none' })
       }
     },
     goBack() {

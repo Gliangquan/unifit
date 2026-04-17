@@ -6,9 +6,13 @@ export interface StudentProfile {
   userId: number;
   studentId: string;
   realName: string;
+  classId?: number;
+  className?: string;
   verificationStatus: 'pending' | 'approved' | 'rejected';
   rejectReason?: string;
   createTime?: string;
+  auditTime?: string;
+  updateTime?: string;
 }
 
 export interface StudentAuditRequest {
@@ -19,6 +23,10 @@ export interface StudentAuditRequest {
 
 export function listPendingStudents(): Promise<BaseResponse<StudentProfile[]>> {
   return request.get('/student/verify/pending');
+}
+
+export function listStudentAuditHistory(): Promise<BaseResponse<StudentProfile[]>> {
+  return request.get('/student/verify/history');
 }
 
 export function auditStudent(data: StudentAuditRequest): Promise<BaseResponse<boolean>> {

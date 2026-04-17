@@ -30,9 +30,9 @@ public class CheckinController {
     private UserService userService;
 
     @PostMapping("/do")
-    public BaseResponse<Boolean> checkin(@RequestBody(required = false) CheckinRequest request, HttpServletRequest httpServletRequest) {
+    public BaseResponse<Map<String, Object>> checkin(@RequestBody(required = false) CheckinRequest request, HttpServletRequest httpServletRequest) {
         User loginUser = userService.getLoginUser(httpServletRequest);
-        boolean result = checkinService.checkin(loginUser, request);
+        Map<String, Object> result = checkinService.checkin(loginUser, request);
         badgeService.evaluateAndGrant(loginUser);
         return ResultUtils.success(result);
     }

@@ -93,6 +93,18 @@ public class AdminController {
         return ResultUtils.success(adminService.getUserActivityStats());
     }
 
+    @GetMapping("/analysis/overview")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Map<String, Object>> analysisOverview() {
+        return ResultUtils.success(adminService.getAnalysisOverview());
+    }
+
+    @GetMapping("/analysis/class-comparison")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<List<Map<String, Object>>> classComparison() {
+        return ResultUtils.success(adminService.getClassComparisonData());
+    }
+
     @GetMapping("/export/users-scores")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public ResponseEntity<byte[]> exportCsv() {

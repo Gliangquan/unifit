@@ -109,6 +109,8 @@ public class PlanServiceImpl implements PlanService {
 
         String scoreLevel = calculateScoreLevel(latest.getId(), request);
         String bmiRange = resolveBmiRange(latest.getId(), request.getBmiValue());
+        String normalizedFitnessLevel = normalizeFitnessLevel(request.getFitnessLevel());
+        String normalizedEquipmentType = normalizeEquipmentType(request.getEquipmentType());
         PlanTemplate template = pickTemplate(request, scoreLevel, bmiRange);
         if (template == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "未匹配到训练模板");
@@ -128,8 +130,8 @@ public class PlanServiceImpl implements PlanService {
         userPlan.setTemplateId(template.getId());
         userPlan.setTestItemCode(request.getTestItemCode());
         userPlan.setScoreLevel(scoreLevel);
-        userPlan.setFitnessLevel(request.getFitnessLevel());
-        userPlan.setEquipmentType(request.getEquipmentType());
+        userPlan.setFitnessLevel(StringUtils.defaultIfBlank(normalizedFitnessLevel, request.getFitnessLevel()));
+        userPlan.setEquipmentType(StringUtils.defaultIfBlank(normalizedEquipmentType, request.getEquipmentType()));
         userPlan.setDaysPerWeek(request.getDaysPerWeek());
         userPlan.setStatus("active");
 
@@ -145,7 +147,7 @@ public class PlanServiceImpl implements PlanService {
         QueryWrapper<PlanTemplateItem> itemQw = new QueryWrapper<>();
         itemQw.eq("template_id", template.getId()).orderByAsc("week_no", "day_no", "sort_no");
         List<PlanTemplateItem> templateItems = planTemplateItemMapper.selectList(itemQw);
-        List<UserPlanItem> personalizedItems = buildPersonalizedPlanItems(templateItems, bmiRange, request.getFitnessLevel());
+        List<UserPlanItem> personalizedItems = buildPersonalizedPlanItems(templateItems, request, bmiRange, scoreLevel);
         for (UserPlanItem userPlanItem : personalizedItems) {
             userPlanItem.setUserPlanId(userPlan.getId());
             userPlanItem.setCompleted(0);
@@ -295,31 +297,57 @@ public class PlanServiceImpl implements PlanService {
         return best;
     }
 
-    private List<UserPlanItem> buildPersonalizedPlanItems(List<PlanTemplateItem> templateItems, String bmiRange, String fitnessLevel) {
+    private List<UserPlanItem> buildPersonalizedPlanItems(List<PlanTemplateItem> templateItems,
+                                                          PlanGenerateRequest request,
+                                                          String bmiRange,
+                                                          String scoreLevel) {
         if (templateItems == null || templateItems.isEmpty()) {
             return new ArrayList<>();
         }
 
         Set<Long> baseExerciseIds = templateItems.stream().map(PlanTemplateItem::getExerciseId).collect(Collectors.toSet());
         Map<Long, Exercise> exerciseMap = baseExerciseIds.isEmpty()
-                ? Map.of()
+                ? new HashMap<>()
                 : exerciseMapper.selectBatchIds(baseExerciseIds).stream()
-                .collect(Collectors.toMap(Exercise::getId, Function.identity(), (a, b) -> a));
+                .collect(Collectors.toMap(Exercise::getId, Function.identity(), (a, b) -> a, HashMap::new));
         Map<Long, List<Exercise>> alternativeMap = loadAlternativeExerciseMap(baseExerciseIds, exerciseMap);
+        List<Exercise> activeExercises = exerciseMapper.selectList(new QueryWrapper<Exercise>()
+                .eq("status", 1)
+                .orderByAsc("id"));
 
         boolean highBmi = "overweight".equals(bmiRange) || "obese".equals(bmiRange);
         boolean lowBmi = "underweight".equals(bmiRange);
-        String normalizedFitnessLevel = normalizeFitnessLevel(fitnessLevel);
+        String normalizedFitnessLevel = normalizeFitnessLevel(request == null ? null : request.getFitnessLevel());
+        String normalizedEquipmentType = normalizeEquipmentType(request == null ? null : request.getEquipmentType());
+        String testItemCode = request == null ? null : request.getTestItemCode();
+        int targetDifficultyRank = targetDifficultyRank(normalizedFitnessLevel, scoreLevel);
+        int daysPerWeek = request == null || request.getDaysPerWeek() == null ? 0 : request.getDaysPerWeek();
 
         List<UserPlanItem> result = new ArrayList<>();
         for (PlanTemplateItem item : templateItems) {
             Long selectedExerciseId = chooseExerciseForStage(item, alternativeMap, exerciseMap, normalizedFitnessLevel);
             Exercise exercise = exerciseMap.get(selectedExerciseId);
+            Exercise personalizedExercise = pickPersonalizedExercise(
+                    item,
+                    exercise,
+                    alternativeMap.getOrDefault(item.getExerciseId(), List.of()),
+                    activeExercises,
+                    testItemCode,
+                    normalizedEquipmentType,
+                    targetDifficultyRank,
+                    daysPerWeek
+            );
+            if (personalizedExercise != null) {
+                selectedExerciseId = personalizedExercise.getId();
+                exercise = personalizedExercise;
+                exerciseMap.putIfAbsent(personalizedExercise.getId(), personalizedExercise);
+            }
 
             int sets = scaleMetric(item.getSetsCount(), 1D + 0.12D * Math.max(0, Math.min(3, safeWeek(item.getWeekNo()) - 1)), 1, 50);
             int reps = scaleMetric(item.getRepsCount(), 1D + 0.12D * Math.max(0, Math.min(3, safeWeek(item.getWeekNo()) - 1)), 1, 300);
             int duration = scaleMetric(item.getDurationMinutes(), 1D + 0.10D * Math.max(0, Math.min(3, safeWeek(item.getWeekNo()) - 1)), 5, 180);
-            String note = StringUtils.trimToEmpty(item.getIntensityNote());
+            String note = appendNote(StringUtils.trimToEmpty(item.getIntensityNote()),
+                    buildPersonalizationNote(testItemCode, normalizedEquipmentType, safeDay(item.getDayNo()), daysPerWeek));
 
             if (exercise != null) {
                 if (highBmi) {
@@ -350,6 +378,180 @@ public class PlanServiceImpl implements PlanService {
             result.add(planItem);
         }
         return result;
+    }
+
+    private Exercise pickPersonalizedExercise(PlanTemplateItem item,
+                                              Exercise current,
+                                              List<Exercise> alternatives,
+                                              List<Exercise> activeExercises,
+                                              String testItemCode,
+                                              String equipmentType,
+                                              int targetDifficultyRank,
+                                              int daysPerWeek) {
+        Map<Long, Exercise> candidates = new java.util.LinkedHashMap<>();
+        if (current != null && current.getId() != null) {
+            candidates.put(current.getId(), current);
+        }
+        for (Exercise alternative : alternatives) {
+            if (alternative != null && alternative.getId() != null) {
+                candidates.putIfAbsent(alternative.getId(), alternative);
+            }
+        }
+        for (Exercise exercise : activeExercises) {
+            if (exercise != null && exercise.getId() != null) {
+                candidates.putIfAbsent(exercise.getId(), exercise);
+            }
+        }
+        if (candidates.isEmpty()) {
+            return current;
+        }
+
+        int dayNo = safeDay(item.getDayNo());
+        Exercise best = current;
+        int bestScore = current == null ? Integer.MIN_VALUE
+                : computeExerciseMatchScore(current, testItemCode, equipmentType, targetDifficultyRank, dayNo, daysPerWeek) + 6;
+        for (Exercise candidate : candidates.values()) {
+            int score = computeExerciseMatchScore(candidate, testItemCode, equipmentType, targetDifficultyRank, dayNo, daysPerWeek);
+            if (score > bestScore) {
+                best = candidate;
+                bestScore = score;
+            }
+        }
+        return best;
+    }
+
+    private int computeExerciseMatchScore(Exercise exercise,
+                                          String testItemCode,
+                                          String equipmentType,
+                                          int targetDifficultyRank,
+                                          int dayNo,
+                                          int daysPerWeek) {
+        if (exercise == null) {
+            return Integer.MIN_VALUE;
+        }
+        String source = normalize(StringUtils.defaultString(exercise.getCategory()) + " "
+                + StringUtils.defaultString(exercise.getName()) + " "
+                + StringUtils.defaultString(exercise.getDescription()) + " "
+                + StringUtils.defaultString(exercise.getEquipmentRequired()));
+        int score = 0;
+        score += 18 - Math.min(18, Math.abs(difficultyRank(exercise.getDifficulty()) - targetDifficultyRank) * 8);
+        score += countKeywordMatches(source, goalKeywords(testItemCode)) * 12;
+
+        if (isRunningGoal(testItemCode) && (source.contains("跑") || source.contains("有氧") || source.contains("跳绳"))) {
+            score += 10;
+        }
+        if (isStrengthGoal(testItemCode) && (source.contains("hiit") || source.contains("腰腹") || source.contains("核心")
+                || source.contains("力量") || source.contains("上肢") || source.contains("下肢"))) {
+            score += 10;
+        }
+        if (isFlexibilityGoal(testItemCode) && (source.contains("瑜伽") || source.contains("八段锦")
+                || source.contains("恢复") || source.contains("拉伸"))) {
+            score += 14;
+        }
+
+        if (daysPerWeek > 0 && dayNo == daysPerWeek) {
+            if (source.contains("恢复") || source.contains("瑜伽") || source.contains("八段锦")
+                    || source.contains("拉伸") || source.contains("慢跑")) {
+                score += 12;
+            }
+            if (source.contains("hiit") || source.contains("暴汗")) {
+                score -= 4;
+            }
+        } else if (source.contains("恢复") || source.contains("拉伸")) {
+            score -= 2;
+        }
+
+        String normalizedEquipmentType = normalizeEquipmentType(equipmentType);
+        if ("track".equals(normalizedEquipmentType)) {
+            if (source.contains("跑") || source.contains("跳绳") || source.contains("有氧")) {
+                score += 8;
+            }
+            if (source.contains("瑜伽") || source.contains("八段锦")) {
+                score -= 3;
+            }
+        }
+        if ("gym".equals(normalizedEquipmentType)
+                && (source.contains("力量") || source.contains("hiit") || source.contains("上肢") || source.contains("下肢"))) {
+            score += 4;
+        }
+        if ("bodyweight".equals(normalizedEquipmentType)
+                && (source.contains("器械") || source.contains("弹力带") || source.contains("跑道"))) {
+            score -= 6;
+        }
+
+        int dayVariant = Math.abs((exercise.getId().intValue() % 5) - ((Math.max(dayNo, 1) - 1) % 5));
+        score -= dayVariant;
+        return score;
+    }
+
+    private String buildPersonalizationNote(String testItemCode, String equipmentType, int dayNo, int daysPerWeek) {
+        String targetText = "专项提升";
+        if (isRunningGoal(testItemCode)) {
+            targetText = "耐力与节奏";
+        } else if (isStrengthGoal(testItemCode)) {
+            targetText = "力量与核心";
+        } else if (isFlexibilityGoal(testItemCode)) {
+            targetText = "柔韧与恢复";
+        }
+        String equipmentText = "bodyweight".equals(equipmentType) ? "徒手/宿舍可完成" :
+                ("track".equals(equipmentType) ? "跑道环境优先" : ("gym".equals(equipmentType) ? "有器械条件可加练" : "按当前条件执行"));
+        String dayText = daysPerWeek > 0 && dayNo == daysPerWeek ? "本日建议以恢复衔接为主" : "本日建议以专项刺激为主";
+        return "个性化方向：" + targetText + "；" + equipmentText + "；" + dayText;
+    }
+
+    private List<String> goalKeywords(String testItemCode) {
+        if (StringUtils.isBlank(testItemCode)) {
+            return List.of();
+        }
+        switch (testItemCode) {
+            case "pull_up":
+                return List.of("上肢", "背", "引体", "俯卧撑", "核心", "腰腹", "hiit");
+            case "sit_up":
+                return List.of("核心", "腹", "腰腹", "hiit", "瑜伽");
+            case "long_jump":
+                return List.of("下肢", "跳", "爆发", "跳绳", "跑", "hiit");
+            case "run_1000":
+            case "run_800":
+            case "run_50":
+                return List.of("跑", "有氧", "跳绳", "耐力", "hiit");
+            case "vital_capacity":
+                return List.of("有氧", "跑", "跳绳", "呼吸", "恢复", "瑜伽", "八段锦");
+            case "sit_reach":
+                return List.of("瑜伽", "八段锦", "拉伸", "恢复", "柔韧");
+            default:
+                return List.of();
+        }
+    }
+
+    private int countKeywordMatches(String source, List<String> keywords) {
+        if (StringUtils.isBlank(source) || keywords == null || keywords.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (String keyword : keywords) {
+            if (StringUtils.isNotBlank(keyword) && source.contains(normalize(keyword))) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private boolean isRunningGoal(String testItemCode) {
+        return "run_1000".equals(testItemCode) || "run_800".equals(testItemCode) || "run_50".equals(testItemCode);
+    }
+
+    private boolean isStrengthGoal(String testItemCode) {
+        return "pull_up".equals(testItemCode) || "sit_up".equals(testItemCode) || "long_jump".equals(testItemCode);
+    }
+
+    private boolean isFlexibilityGoal(String testItemCode) {
+        return "sit_reach".equals(testItemCode);
+    }
+
+    private int targetDifficultyRank(String fitnessLevel, String scoreLevel) {
+        int fitnessRank = difficultyRank(fitnessLevel);
+        int scoreRank = difficultyRank(scoreLevel);
+        return Math.max(1, Math.min(3, Math.max(fitnessRank, scoreRank)));
     }
 
     private Map<Long, List<Exercise>> loadAlternativeExerciseMap(Set<Long> exerciseIds, Map<Long, Exercise> exerciseMap) {
@@ -419,6 +621,10 @@ public class PlanServiceImpl implements PlanService {
 
     private int safeWeek(Integer weekNo) {
         return weekNo == null || weekNo <= 0 ? 1 : weekNo;
+    }
+
+    private int safeDay(Integer dayNo) {
+        return dayNo == null || dayNo <= 0 ? 1 : dayNo;
     }
 
     private int difficultyRank(String difficulty) {

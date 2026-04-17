@@ -78,7 +78,23 @@ export default {
     loadRecords() {
       this.user = uni.getStorageSync('user') || {}
       const list = uni.getStorageSync(this.getOrderListKey()) || []
-      this.records = (Array.isArray(list) ? list : []).slice().sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+      const userId = this.user.id || this.resolveLatestUserId()
+      const walletKey = `wallet_transactions_${userId || 'guest'}`
+      const walletRows = uni.getStorageSync(walletKey) || []
+      const rechargeRecords = (Array.isArray(walletRows) ? walletRows : []).map((item, index) => ({
+        orderNo: `RECHARGE_${index}_${item.time || item.createdAt || index}`,
+        typeText: '钱包充值',
+        planName: item.type || '余额充值',
+        amount: item.amount || 0,
+        status: 'paid',
+        createdAt: item.time || item.createdAt,
+        paidAt: item.time || item.createdAt
+      }))
+      this.records = (Array.isArray(list) ? list : []).concat(rechargeRecords).slice().sort((a, b) => Number(new Date(b.createdAt || 0).getTime() || 0) - Number(new Date(a.createdAt || 0).getTime() || 0))
+    },
+    resolveLatestUserId() {
+      const localUser = uni.getStorageSync('user') || {}
+      return localUser.id || 'guest'
     },
     formatDateTime(v) {
       if (!v) return '--'

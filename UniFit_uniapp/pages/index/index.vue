@@ -18,7 +18,7 @@
         <view class="stat-text">连续打卡</view>
       </view>
       <view class="stat-box clickable-stat" v-if="!isAdminRole" @click="openBadgeSummary">
-        <view class="stat-number">{{ badges.length }}</view>
+        <view class="stat-number">{{ unlockedBadgeCount }}</view>
         <view class="stat-text">我的徽章</view>
       </view>
       <view class="stat-box" v-if="isAdminRole">
@@ -34,52 +34,17 @@
     <!-- 快捷操作 -->
     <view class="section">
       <view class="section-title">快捷操作</view>
-      <view class="action-grid" v-if="!isAdminRole">
-        <view class="action-btn" @click="go('/pages/mine/mine')">
-          <image class="action-icon" src="/static/icon_uni/wode.png" mode="aspectFit" />
-          <text class="action-text">我的</text>
-        </view>
-        <view class="action-btn" @click="go('/pages/checkin/checkin')">
-          <image class="action-icon" src="/static/icon_uni/wancheng.png" mode="aspectFit" />
-          <text class="action-text">打卡</text>
-        </view>
-        <view class="action-btn" @click="go('/pages/test/test')">
-          <image class="action-icon" src="/static/icon_uni/shezhi.png" mode="aspectFit" />
-          <text class="action-text">体测</text>
-        </view>
-        <view class="action-btn" @click="go('/pages/exercise/list')">
-          <image class="action-icon" src="/static/icon_uni/fenlei.png" mode="aspectFit" />
-          <text class="action-text">动作库</text>
-        </view>
-        <view class="action-btn" @click="go('/pages/exercise/my')">
-          <image class="action-icon" src="/static/icon_uni/zan.png" mode="aspectFit" />
-          <text class="action-text">我的互动</text>
-        </view>
-        <view class="action-btn" @click="go('/pages/plan/history')">
-          <image class="action-icon" src="/static/icon_uni/rili.png" mode="aspectFit" />
-          <text class="action-text">历史计划</text>
-        </view>
-        <view class="action-btn" @click="go('/pages/message/message')">
-          <image class="action-icon" src="/static/icon_uni/xiaoxi.png" mode="aspectFit" />
-          <text class="action-text">留言</text>
-        </view>
-      </view>
-      <view class="action-grid" v-else>
-        <view class="action-btn" @click="go('/pages/mine/mine')">
-          <image class="action-icon" src="/static/icon_uni/wode.png" mode="aspectFit" />
-          <text class="action-text">我的</text>
-        </view>
-        <view class="action-btn" @click="go('/pages/admin/dashboard')">
-          <image class="action-icon" src="/static/icon_uni/shezhi.png" mode="aspectFit" />
-          <text class="action-text">看板</text>
-        </view>
-        <view class="action-btn" @click="go('/pages/admin/students')">
-          <image class="action-icon" src="/static/icon_uni/wancheng.png" mode="aspectFit" />
-          <text class="action-text">审核</text>
-        </view>
-        <view class="action-btn" @click="go('/pages/admin/messages')">
-          <image class="action-icon" src="/static/icon_uni/xiaoxi.png" mode="aspectFit" />
-          <text class="action-text">回复</text>
+      <view class="action-grid">
+        <view
+          class="action-btn"
+          v-for="item in quickActions"
+          :key="item.text"
+          @click="go(item.url)"
+        >
+          <view class="action-icon-badge" :style="{ background: item.bg }">
+            <text class="action-icon-emoji">{{ item.icon }}</text>
+          </view>
+          <text class="action-text">{{ item.text }}</text>
         </view>
       </view>
     </view>
@@ -99,6 +64,14 @@
         <view class="plan-row">
           <text class="plan-label">等级</text>
           <text class="plan-value">{{ scoreLevelLabel(currentPlan.scoreLevel) }}</text>
+        </view>
+        <view class="plan-row">
+          <text class="plan-label">体能基础</text>
+          <text class="plan-value">{{ fitnessLevelLabel(currentPlan.fitnessLevel) }}</text>
+        </view>
+        <view class="plan-row">
+          <text class="plan-label">器械条件</text>
+          <text class="plan-value">{{ equipmentTypeLabel(currentPlan.equipmentType) }}</text>
         </view>
         <view class="plan-row">
           <text class="plan-label">频率</text>
@@ -130,6 +103,52 @@
         </view>
       </view>
     </view>
+
+    <view v-if="badgePopupVisible" class="badge-mask" @click="closeBadgeSummary">
+      <view class="badge-popup" @click.stop>
+        <view class="badge-popup-header">
+          <view>
+            <view class="badge-popup-title">我的徽章墙</view>
+            <view class="badge-popup-subtitle">灰色未解锁，高亮为已解锁</view>
+          </view>
+          <text class="badge-popup-close" @click="closeBadgeSummary">×</text>
+        </view>
+
+        <view v-if="badgeWall.length" class="badge-grid">
+          <view
+            v-for="item in badgeWall"
+            :key="item.id"
+            :class="['badge-item', item.unlocked ? 'badge-item-unlocked' : 'badge-item-locked', selectedBadge && selectedBadge.id === item.id ? 'badge-item-active' : '']"
+            @click="selectBadge(item)"
+          >
+            <view class="badge-icon-wrap">
+              <text class="badge-icon-text">{{ badgeGlyph(item) }}</text>
+            </view>
+            <text class="badge-name">{{ item.badgeName }}</text>
+            <text class="badge-state">{{ item.unlocked ? '已解锁' : '未解锁' }}</text>
+          </view>
+        </view>
+        <view v-else class="empty-box" style="margin: 0;">当前还没有徽章定义。</view>
+
+        <view v-if="selectedBadge" class="badge-detail-card">
+          <view class="badge-detail-top">
+            <view :class="['badge-detail-icon', selectedBadge.unlocked ? 'badge-detail-icon-unlocked' : 'badge-detail-icon-locked']">
+              <text class="badge-detail-icon-text">{{ badgeGlyph(selectedBadge) }}</text>
+            </view>
+            <view class="badge-detail-main">
+              <view class="badge-detail-name">{{ selectedBadge.badgeName }}</view>
+              <view class="badge-detail-desc">{{ badgeConditionText(selectedBadge) }}</view>
+              <view class="badge-detail-time" v-if="selectedBadge.achievedDate">解锁时间：{{ formatBadgeDate(selectedBadge.achievedDate) }}</view>
+              <view class="badge-detail-time" v-else>达成后将自动点亮该徽章</view>
+            </view>
+          </view>
+          <view class="badge-share-row">
+            <button class="badge-share-btn badge-share-btn-primary" @click="shareBadge('moments')">分享到朋友圈</button>
+            <button class="badge-share-btn" @click="shareBadge('feed')">分享到动态</button>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -149,11 +168,14 @@ export default {
     return {
       user: {},
       badges: [],
+      badgeWall: [],
       streak: 0,
       currentPlan: {},
       testItemNameMap: {},
       studentProfile: {},
       needStudentVerify: false,
+      badgePopupVisible: false,
+      selectedBadge: null,
       dashboard: {
         studentCount: 0,
         checkinLast7Days: 0
@@ -192,6 +214,27 @@ export default {
         rejected: '已拒绝'
       }
       return map[this.studentProfile.verificationStatus] || '未提交'
+    },
+    unlockedBadgeCount() {
+      return (this.badgeWall || []).filter(item => item.unlocked).length
+    },
+    quickActions() {
+      return this.isAdminRole
+        ? [
+            { text: '我的', url: '/pages/mine/mine', icon: '👤', bg: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)' },
+            { text: '看板', url: '/pages/admin/dashboard', icon: '📊', bg: 'linear-gradient(135deg, #eff6ff 0%, #bfdbfe 100%)' },
+            { text: '审核', url: '/pages/admin/students', icon: '✅', bg: 'linear-gradient(135deg, #ecfdf5 0%, #bbf7d0 100%)' },
+            { text: '回复', url: '/pages/admin/messages', icon: '💬', bg: 'linear-gradient(135deg, #f5f3ff 0%, #ddd6fe 100%)' }
+          ]
+        : [
+            { text: '我的', url: '/pages/mine/mine', icon: '👤', bg: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)' },
+            { text: '打卡', url: '/pages/checkin/checkin', icon: '✅', bg: 'linear-gradient(135deg, #ecfdf5 0%, #bbf7d0 100%)' },
+            { text: '体测', url: '/pages/test/test', icon: '📈', bg: 'linear-gradient(135deg, #eff6ff 0%, #bfdbfe 100%)' },
+            { text: '动作库', url: '/pages/exercise/list', icon: '🏋️', bg: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' },
+            { text: '我的互动', url: '/pages/exercise/my', icon: '👍', bg: 'linear-gradient(135deg, #fae8ff 0%, #e9d5ff 100%)' },
+            { text: '历史计划', url: '/pages/plan/history', icon: '📅', bg: 'linear-gradient(135deg, #ecfeff 0%, #a5f3fc 100%)' },
+            { text: '留言', url: '/pages/message/message', icon: '💬', bg: 'linear-gradient(135deg, #f3f4f6 0%, #d1d5db 100%)' }
+          ]
     }
   },
   async onShow() {
@@ -235,6 +278,7 @@ export default {
       const testItems = testItemsRes.status === 'fulfilled' ? (testItemsRes.value || []) : []
 
       this.badges = (badgeData && badgeData.badges) || []
+      this.badgeWall = (badgeData && badgeData.badgeWall) || []
       this.streak = streakData || 0
       this.studentProfile = profile || {}
       const map = {}
@@ -272,16 +316,92 @@ export default {
       }
       return map[level] || '未知等级'
     },
+    fitnessLevelLabel(level) {
+      const map = {
+        newbie: '初级',
+        beginner: '初级',
+        basic: '中级',
+        intermediate: '中级',
+        advanced: '高级'
+      }
+      return map[level] || level || '-'
+    },
+    equipmentTypeLabel(type) {
+      const map = {
+        bodyweight: '无器械',
+        track: '跑道',
+        gym: '健身房'
+      }
+      return map[type] || type || '-'
+    },
+    badgeGlyph(item) {
+      const row = item || {}
+      const conditionType = row.conditionType || ''
+      const code = String(row.badgeCode || '').toUpperCase()
+      if (conditionType === 'streak_days' || code.includes('STR')) return '🔥'
+      if (conditionType === 'checkin_count' || code.includes('CHK')) return '🏅'
+      if (code.includes('VIP') || code.includes('STAR')) return '⭐'
+      return '🎖️'
+    },
+    badgeConditionText(item) {
+      if (!item) return '持续训练即可解锁更多徽章'
+      const value = Number(item.conditionValue || 0)
+      if (item.conditionType === 'streak_days') {
+        return `连续打卡 ${value || 0} 天可解锁`
+      }
+      if (item.conditionType === 'checkin_count') {
+        return `累计完成 ${value || 0} 次打卡可解锁`
+      }
+      return '完成对应训练目标后自动解锁'
+    },
+    formatBadgeDate(value) {
+      if (!value) return '--'
+      const d = new Date(value)
+      if (Number.isNaN(d.getTime())) return '--'
+      const y = d.getFullYear()
+      const m = `${d.getMonth() + 1}`.padStart(2, '0')
+      const day = `${d.getDate()}`.padStart(2, '0')
+      return `${y}-${m}-${day}`
+    },
     openBadgeSummary() {
-      const names = (this.badges || []).map(item => item.badgeName).filter(Boolean)
-      const content = names.length
-        ? `已获得 ${this.badges.length} 枚徽章：${names.join('、')}`
-        : '当前还没有获得徽章，先去坚持打卡吧。'
-      uni.showModal({
-        title: '我的徽章',
-        content,
-        showCancel: false,
-        confirmText: '知道了'
+      this.badgePopupVisible = true
+      const firstUnlocked = (this.badgeWall || []).find(item => item.unlocked)
+      this.selectedBadge = firstUnlocked || (this.badgeWall || [])[0] || null
+    },
+    closeBadgeSummary() {
+      this.badgePopupVisible = false
+    },
+    selectBadge(item) {
+      this.selectedBadge = item || null
+    },
+    buildBadgeShareText(scene) {
+      const badge = this.selectedBadge || {}
+      const sceneText = scene === 'moments' ? '朋友圈' : '动态'
+      const statusText = badge.unlocked ? '我已解锁' : '我正在冲刺'
+      return `${statusText}「${badge.badgeName || '训练徽章'}」！${this.badgeConditionText(badge)}，快来 UniFit 和我一起坚持训练吧～（${sceneText}分享）`
+    },
+    shareBadge(scene) {
+      if (!this.selectedBadge) return
+      const shareText = this.buildBadgeShareText(scene)
+      const shareUrl = typeof window !== 'undefined' && window.location ? window.location.href : ''
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        navigator.share({
+          title: `${this.selectedBadge.badgeName || '训练徽章'} - UniFit`,
+          text: shareText,
+          url: shareUrl
+        }).then(() => {
+          uni.showToast({ title: '分享成功', icon: 'success' })
+        }).catch(() => {
+          uni.setClipboardData({
+            data: `${shareText}${shareUrl ? `\n${shareUrl}` : ''}`,
+            success: () => uni.showToast({ title: '已复制分享文案', icon: 'success' })
+          })
+        })
+        return
+      }
+      uni.setClipboardData({
+        data: `${shareText}${shareUrl ? `\n${shareUrl}` : ''}`,
+        success: () => uni.showToast({ title: '已复制分享文案', icon: 'success' })
       })
     }
   }
@@ -413,9 +533,19 @@ export default {
   }
 }
 
-.action-icon {
-  width: 40rpx;
-  height: 40rpx;
+.action-icon-badge {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.7);
+}
+
+.action-icon-emoji {
+  font-size: 34rpx;
+  line-height: 1;
 }
 
 .action-text {
@@ -527,5 +657,187 @@ export default {
   font-size: 28rpx;
   font-weight: 700;
   color: $primary-color;
+}
+
+.badge-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 999;
+}
+
+.badge-popup {
+  width: 100%;
+  max-height: 84vh;
+  background: #fff;
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 24rpx;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.badge-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20rpx;
+}
+
+.badge-popup-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.badge-popup-subtitle {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: $text-secondary;
+}
+
+.badge-popup-close {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 24rpx;
+  background: #f3f4f6;
+  text-align: center;
+  line-height: 48rpx;
+  font-size: 32rpx;
+  color: $text-secondary;
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+}
+
+.badge-item {
+  border-radius: 20rpx;
+  padding: 18rpx 12rpx;
+  text-align: center;
+  border: 2rpx solid transparent;
+}
+
+.badge-item-locked {
+  background: linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%);
+  color: #9ca3af;
+}
+
+.badge-item-unlocked {
+  background: linear-gradient(180deg, #fff7ed 0%, #fdba74 100%);
+  color: #9a3412;
+}
+
+.badge-item-active {
+  border-color: $primary-color;
+  box-shadow: 0 8rpx 24rpx rgba(249, 115, 22, 0.16);
+}
+
+.badge-icon-wrap {
+  width: 84rpx;
+  height: 84rpx;
+  margin: 0 auto 10rpx;
+  border-radius: 42rpx;
+  background: rgba(255, 255, 255, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-icon-text {
+  font-size: 42rpx;
+  line-height: 1;
+}
+
+.badge-name {
+  display: block;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.badge-state {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 20rpx;
+}
+
+.badge-detail-card {
+  margin-top: 22rpx;
+  border-radius: 22rpx;
+  background: #fff7ed;
+  border: 1rpx solid #fed7aa;
+  padding: 18rpx;
+}
+
+.badge-detail-top {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.badge-detail-icon {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.badge-detail-icon-unlocked {
+  background: linear-gradient(180deg, #fb923c 0%, #f97316 100%);
+}
+
+.badge-detail-icon-locked {
+  background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%);
+}
+
+.badge-detail-icon-text {
+  font-size: 48rpx;
+}
+
+.badge-detail-main {
+  flex: 1;
+}
+
+.badge-detail-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.badge-detail-desc,
+.badge-detail-time {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: $text-secondary;
+  line-height: 1.5;
+}
+
+.badge-share-row {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.badge-share-btn {
+  flex: 1;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 999rpx;
+  background: #fff;
+  color: $primary-color;
+  border: 1rpx solid #fdba74;
+  font-size: 24rpx;
+}
+
+.badge-share-btn-primary {
+  background: $primary-color;
+  color: #fff;
 }
 </style>

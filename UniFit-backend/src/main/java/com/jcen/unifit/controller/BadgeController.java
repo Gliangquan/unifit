@@ -35,6 +35,7 @@ public class BadgeController {
         Map<String, Object> result = new HashMap<>();
         result.put("badges", badges);
         result.put("records", records);
+        result.put("badgeWall", badgeService.listBadgeWall(loginUser));
         return ResultUtils.success(result);
     }
 }

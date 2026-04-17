@@ -34,6 +34,14 @@
             <text class="value">{{ scoreLevelLabel(plan.scoreLevel) }}</text>
           </view>
           <view class="row-between line">
+            <text class="label">体能基础</text>
+            <text class="value">{{ fitnessLevelLabel(plan.fitnessLevel) }}</text>
+          </view>
+          <view class="row-between line">
+            <text class="label">器械条件</text>
+            <text class="value">{{ equipmentTypeLabel(plan.equipmentType) }}</text>
+          </view>
+          <view class="row-between line">
             <text class="label">每周频率</text>
             <text class="value">每周 {{ plan.daysPerWeek || 0 }} 天</text>
           </view>
@@ -83,6 +91,32 @@
             {{ courseUnlock.status === 'pending' ? '去支付解锁' : '生成解锁订单' }}
           </button>
         </view>
+
+        <view class="section-title">训练完成确认</view>
+        <view v-if="todayPlanItems.length" class="unlock-card">
+          <view class="row-between line">
+            <text class="label">今日训练项</text>
+            <text class="value">{{ completedTodayCount }}/{{ todayPlanItems.length }}</text>
+          </view>
+          <view
+            class="course-row"
+            v-for="item in todayPlanItems"
+            :key="`done_${item.id}`"
+          >
+            <view class="course-main">
+              <view class="course-title">{{ item.exerciseName || ('动作#' + (item.exerciseId || '-')) }}</view>
+              <view class="course-meta">{{ item.setsCount || 0 }}组 · {{ item.repsCount || 0 }}次 · {{ item.durationMinutes || 0 }}分钟</view>
+            </view>
+            <button
+              class="uf-btn-secondary mini-btn"
+              :disabled="Number(item.completed) === 1"
+              @click="markItemDone(item)"
+            >
+              {{ Number(item.completed) === 1 ? '已完成' : '确认完成' }}
+            </button>
+          </view>
+        </view>
+        <view v-else class="empty">今天不是训练日，或当前计划暂无待训练动作。</view>
 
         <view class="section-title">计划关联课程</view>
         <view v-if="groupedCourses.length">
@@ -170,6 +204,24 @@ export default {
         if (a.weekNo !== b.weekNo) return a.weekNo - b.weekNo
         return a.dayNo - b.dayNo
       })
+    },
+    todayTrainingDayNo() {
+      const day = new Date().getDay()
+      return day === 0 ? 7 : day
+    },
+    currentWeekNo() {
+      if (!this.plan.startDate) return 1
+      const start = new Date(this.plan.startDate)
+      const now = new Date()
+      const diffDays = Math.floor((now.getTime() - start.getTime()) / (24 * 3600 * 1000))
+      if (Number.isNaN(diffDays) || diffDays < 0) return 1
+      return Math.min(4, Math.floor(diffDays / 7) + 1)
+    },
+    todayPlanItems() {
+      return (this.plan.items || []).filter(item => Number(item.weekNo) === this.currentWeekNo && Number(item.dayNo) === this.todayTrainingDayNo)
+    },
+    completedTodayCount() {
+      return this.todayPlanItems.filter(item => Number(item.completed) === 1).length
     }
   },
   onLoad(options) {
@@ -386,6 +438,24 @@ export default {
       }
       return map[level] || '未知等级'
     },
+    fitnessLevelLabel(level) {
+      const map = {
+        newbie: '初级',
+        beginner: '初级',
+        basic: '中级',
+        intermediate: '中级',
+        advanced: '高级'
+      }
+      return map[level] || level || '-'
+    },
+    equipmentTypeLabel(type) {
+      const map = {
+        bodyweight: '无器械',
+        track: '跑道',
+        gym: '健身房'
+      }
+      return map[type] || type || '-'
+    },
     formatDate(v) {
       if (!v) return '--'
       return String(v).slice(0, 10)
@@ -410,6 +480,17 @@ export default {
       if (status === 'completed') return 'status-completed'
       if (status === 'archived') return 'status-archived'
       return 'status-active'
+    },
+    async markItemDone(item) {
+      if (!item || !item.id || Number(item.completed) === 1) {
+        return
+      }
+      await request({
+        url: `/plan/item/done?planItemId=${item.id}`,
+        method: 'POST'
+      })
+      uni.showToast({ title: '已记录完成', icon: 'success' })
+      await this.loadPlanDetail()
     },
     goExercise(id) {
       uni.navigateTo({ url: `/pages/exercise/detail?id=${id}` })

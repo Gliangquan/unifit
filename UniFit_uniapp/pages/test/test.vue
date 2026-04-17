@@ -46,7 +46,14 @@
           </view>
         </view>
 
-        <input class="uf-input" v-model="form.scoreValue" type="digit" :placeholder="scorePlaceholder" />
+        <uni-easyinput
+          class="score-input"
+          v-model="form.scoreValue"
+          type="digit"
+          :inputBorder="true"
+          :clearable="true"
+          :placeholder="scorePlaceholder"
+        />
         <button class="uf-btn-primary" @click="submit">提交成绩</button>
       </view>
 
@@ -295,8 +302,9 @@ export default {
       return String(v).slice(0, 10)
     },
     async submit() {
-      if (!this.form.scoreValue) {
-        uni.showToast({ title: '请输入成绩', icon: 'none' })
+      const scoreValue = Number(this.form.scoreValue)
+      if (this.form.scoreValue === '' || Number.isNaN(scoreValue)) {
+        uni.showToast({ title: '请输入有效成绩', icon: 'none' })
         return
       }
       await request({
@@ -304,7 +312,7 @@ export default {
         method: 'POST',
         data: {
           itemCode: this.form.itemCode,
-          scoreValue: Number(this.form.scoreValue)
+          scoreValue
         }
       })
       uni.showToast({ title: '提交成功', icon: 'success' })
@@ -447,6 +455,11 @@ export default {
   overflow: hidden;
 }
 
+.score-input {
+  position: relative;
+  z-index: 2;
+}
+
 .input-card::after {
   content: '';
   position: absolute;
@@ -456,6 +469,7 @@ export default {
   height: 220rpx;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(63, 102, 143, 0.08) 0%, rgba(63, 102, 143, 0) 68%);
+  pointer-events: none;
 }
 
 .admin-desc {

@@ -75,7 +75,8 @@ export default {
       ranking: [],
       rankingDays: 7,
       classRanking: [],
-      myClassChallenge: {}
+      myClassChallenge: {},
+      currentPlan: null
     }
   },
   computed: {
@@ -110,24 +111,33 @@ export default {
         this.streak = 0
         return
       }
-      const [streak, ranking, classRanking, myClassChallenge] = await Promise.all([
+      const [streak, ranking, classRanking, myClassChallenge, currentPlan] = await Promise.all([
         request({ url: '/checkin/streak', showError: false }),
         rankingPromise,
         classRankingPromise,
-        request({ url: `/checkin/challenge/my-class?days=${this.rankingDays}`, showError: false }).catch(() => ({}))
+        request({ url: `/checkin/challenge/my-class?days=${this.rankingDays}`, showError: false }).catch(() => ({})),
+        request({ url: '/plan/current', showError: false }).catch(() => null)
       ])
       this.streak = streak || 0
       this.ranking = ranking || []
       this.classRanking = classRanking || []
       this.myClassChallenge = myClassChallenge || {}
+      this.currentPlan = currentPlan || null
     },
     async doCheckin() {
-      await request({
+      if (!this.currentPlan || !this.currentPlan.planId) {
+        uni.showToast({ title: '请先生成训练计划', icon: 'none' })
+        return
+      }
+      const result = await request({
         url: '/checkin/do',
         method: 'POST',
-        data: { durationMinutes: Number(this.duration || 60) }
+        data: {
+          userPlanId: this.currentPlan.planId,
+          durationMinutes: Number(this.duration || 60)
+        }
       })
-      uni.showToast({ title: '打卡成功', icon: 'success' })
+      uni.showToast({ title: result && result.alreadyCheckedIn ? '今天已打过卡' : '打卡成功', icon: 'success' })
       this.refresh()
     }
   }

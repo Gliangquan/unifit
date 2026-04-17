@@ -51,6 +51,14 @@ export function getActivityStats(): Promise<BaseResponse<any>> {
   return request.get('/admin/dashboard/activity-stats');
 }
 
+export function getAnalysisOverview(): Promise<BaseResponse<any>> {
+  return request.get('/admin/analysis/overview');
+}
+
+export function getClassComparisonData(): Promise<BaseResponse<any[]>> {
+  return request.get('/admin/analysis/class-comparison');
+}
+
 export function updateUserStatus(userId: number, status: number): Promise<BaseResponse<boolean>> {
   return request.post('/admin/user/status', null, { params: { userId, status } });
 }

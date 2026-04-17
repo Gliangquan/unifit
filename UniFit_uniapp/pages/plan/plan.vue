@@ -410,7 +410,13 @@ export default {
         const message = (e && e.message) || ''
         if (message.includes('购买') || message.includes('解锁')) {
           try {
-            await request({ url: '/plan/purchase', method: 'POST', showError: false })
+            const purchaseResult = await request({ url: '/plan/purchase', method: 'POST', showError: false })
+            const localUser = uni.getStorageSync('user') || {}
+            uni.setStorageSync('user', {
+              ...localUser,
+              balance: purchaseResult && purchaseResult.balance !== undefined ? purchaseResult.balance : localUser.balance,
+              planUnlocked: purchaseResult && purchaseResult.planUnlocked !== undefined ? purchaseResult.planUnlocked : localUser.planUnlocked
+            })
             const generatedPlan = await request({
               url: '/plan/generate',
               method: 'POST',
