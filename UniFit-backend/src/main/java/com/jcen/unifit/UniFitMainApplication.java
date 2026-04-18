@@ -6,9 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 @MapperScan("com.jcen.unifit.mapper")
-public class MainApplication {
+public class UniFitMainApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(MainApplication.class, args);
+        SpringApplication.run(UniFitMainApplication.class, args);
     }
 }

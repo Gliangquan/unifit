@@ -12,6 +12,7 @@ import com.jcen.unifit.model.vo.ExerciseLikeVO;
 import com.jcen.unifit.model.vo.ExerciseLikeRecordVO;
 
 import java.util.List;
+import java.util.Map;
 
 public interface ExerciseService {
 
@@ -20,6 +21,8 @@ public interface ExerciseService {
     boolean deleteById(Long id);
 
     Page<Exercise> listExercises(long current, long pageSize, String keyword, String category, String difficulty);
+
+    List<Map<String, String>> listCategoryOptions();
 
     Exercise getById(Long id);
 

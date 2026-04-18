@@ -62,6 +62,12 @@ const bindResize = (chart) => {
   resizeHandlers.push(handler);
 };
 
+const initChart = (dom) => {
+  if (!dom) return null;
+  const instance = echarts.getInstanceByDom(dom);
+  return instance || echarts.init(dom);
+};
+
 const drawCharts = async () => {
   await nextTick();
   const itemDom = document.getElementById('testItemChart');
@@ -71,7 +77,7 @@ const drawCharts = async () => {
   testItemChart?.dispose();
   gradeChart?.dispose();
 
-  testItemChart = echarts.init(itemDom);
+  testItemChart = initChart(itemDom);
   testItemChart.setOption({
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: tableData.value.map((item) => item.itemName) },
@@ -80,7 +86,7 @@ const drawCharts = async () => {
   });
   bindResize(testItemChart);
 
-  gradeChart = echarts.init(gradeDom);
+  gradeChart = initChart(gradeDom);
   gradeChart.setOption({
     tooltip: { trigger: 'item' },
     series: [{ type: 'pie', radius: '55%', data: gradeData.value.map((item) => ({ value: item.value, name: item.name })) }],

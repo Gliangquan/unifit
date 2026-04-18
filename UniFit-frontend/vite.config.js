@@ -9,15 +9,15 @@ export default defineConfig({
     Buffer: 'window.Buffer',
   },
   server: {
-    port: 9991,
+    port: 19922,
     proxy: {
       '/api': {
-        target: 'http://localhost:9901',  // 后端地址
+        target: 'http://localhost:19921',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api'),
       },
       '/ws': {
-        target: 'ws://localhost:9901',  // WebSocket 地址
+        target: 'ws://localhost:19921',
         ws: true,
         changeOrigin: true,
       },

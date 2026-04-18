@@ -27,6 +27,14 @@
       </uni-card>
 
       <uni-card title="动作内容" :is-shadow="false" :border="false" margin="20rpx" padding="20rpx">
+        <view v-if="exercise.demoVideoUrl" class="demo-video-wrap">
+          <view class="video-title">示范视频</view>
+          <video
+            class="video-block"
+            :src="exercise.demoVideoUrl"
+            controls
+          ></video>
+        </view>
         <rich-text class="md-content" :nodes="contentHtml"></rich-text>
         <view v-if="contentVideos.length">
           <video
@@ -292,6 +300,17 @@ export default {
 .stat-text {
   font-size: 24rpx;
   color: #334155;
+}
+
+.demo-video-wrap {
+  margin-bottom: 16rpx;
+}
+
+.video-title {
+  margin-bottom: 12rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: $text-primary;
 }
 
 .md-content {

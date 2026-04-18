@@ -41,8 +41,8 @@
           :key="item.text"
           @click="go(item.url)"
         >
-          <view class="action-icon-badge" :style="{ background: item.bg }">
-            <text class="action-icon-emoji">{{ item.icon }}</text>
+          <view class="action-icon-badge">
+            <uni-icons :type="item.icon" size="28" color="#ffffff"></uni-icons>
           </view>
           <text class="action-text">{{ item.text }}</text>
         </view>
@@ -221,19 +221,19 @@ export default {
     quickActions() {
       return this.isAdminRole
         ? [
-            { text: '我的', url: '/pages/mine/mine', icon: '👤', bg: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)' },
-            { text: '看板', url: '/pages/admin/dashboard', icon: '📊', bg: 'linear-gradient(135deg, #eff6ff 0%, #bfdbfe 100%)' },
-            { text: '审核', url: '/pages/admin/students', icon: '✅', bg: 'linear-gradient(135deg, #ecfdf5 0%, #bbf7d0 100%)' },
-            { text: '回复', url: '/pages/admin/messages', icon: '💬', bg: 'linear-gradient(135deg, #f5f3ff 0%, #ddd6fe 100%)' }
+            { text: '我的', url: '/pages/mine/mine', icon: 'person-filled' },
+            { text: '看板', url: '/pages/admin/dashboard', icon: 'bars' },
+            { text: '审核', url: '/pages/admin/students', icon: 'checkbox-filled' },
+            { text: '回复', url: '/pages/admin/messages', icon: 'chat-filled' }
           ]
         : [
-            { text: '我的', url: '/pages/mine/mine', icon: '👤', bg: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)' },
-            { text: '打卡', url: '/pages/checkin/checkin', icon: '✅', bg: 'linear-gradient(135deg, #ecfdf5 0%, #bbf7d0 100%)' },
-            { text: '体测', url: '/pages/test/test', icon: '📈', bg: 'linear-gradient(135deg, #eff6ff 0%, #bfdbfe 100%)' },
-            { text: '动作库', url: '/pages/exercise/list', icon: '🏋️', bg: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' },
-            { text: '我的互动', url: '/pages/exercise/my', icon: '👍', bg: 'linear-gradient(135deg, #fae8ff 0%, #e9d5ff 100%)' },
-            { text: '历史计划', url: '/pages/plan/history', icon: '📅', bg: 'linear-gradient(135deg, #ecfeff 0%, #a5f3fc 100%)' },
-            { text: '留言', url: '/pages/message/message', icon: '💬', bg: 'linear-gradient(135deg, #f3f4f6 0%, #d1d5db 100%)' }
+            { text: '我的', url: '/pages/mine/mine', icon: 'person-filled' },
+            { text: '打卡', url: '/pages/checkin/checkin', icon: 'checkbox-filled' },
+            { text: '体测', url: '/pages/test/test', icon: 'medal-filled' },
+            { text: '动作库', url: '/pages/exercise/list', icon: 'videocam-filled' },
+            { text: '我的互动', url: '/pages/exercise/my', icon: 'hand-up-filled' },
+            { text: '历史计划', url: '/pages/plan/history', icon: 'calendar-filled' },
+            { text: '留言', url: '/pages/message/message', icon: 'chat-filled' }
           ]
     }
   },
@@ -520,38 +520,35 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
-  padding: 12rpx;
-  border-radius: $radius-md;
-  background: #f9fafb;
-  border: 1rpx solid $border-color;
+  gap: 10rpx;
+  padding: 16rpx 10rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
+  border: 1rpx solid #fed7aa;
   transition: all 0.2s ease;
+  box-shadow: 0 10rpx 24rpx rgba(249, 115, 22, 0.08);
 
   &:active {
-    background: #f0f0f0;
-    transform: scale(0.95);
+    transform: scale(0.96);
+    box-shadow: 0 6rpx 16rpx rgba(249, 115, 22, 0.12);
   }
 }
 
 .action-icon-badge {
-  width: 68rpx;
-  height: 68rpx;
-  border-radius: 22rpx;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 24rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.7);
-}
-
-.action-icon-emoji {
-  font-size: 34rpx;
-  line-height: 1;
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  box-shadow: 0 10rpx 20rpx rgba(249, 115, 22, 0.22);
 }
 
 .action-text {
   font-size: 20rpx;
-  color: $text-primary;
-  font-weight: 500;
+  color: #9a3412;
+  font-weight: 600;
   text-align: center;
 }
 

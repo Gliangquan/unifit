@@ -164,26 +164,26 @@
       {
         "pagePath": "pages/index/index",
         "text": "首页",
-        "iconPath": "static/icon_uni/shouye.png",
-        "selectedIconPath": "static/icon_uni/shouye.png"
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
       },
       {
         "pagePath": "pages/profile/profile",
         "text": "健康",
-        "iconPath": "static/icon_uni/bingli.png",
-        "selectedIconPath": "static/icon_uni/bingli.png"
+        "iconPath": "static/tabbar/health.png",
+        "selectedIconPath": "static/tabbar/health-active.png"
       },
       {
         "pagePath": "pages/plan/plan",
         "text": "计划",
-        "iconPath": "static/icon_uni/rili.png",
-        "selectedIconPath": "static/icon_uni/rili.png"
+        "iconPath": "static/tabbar/plan.png",
+        "selectedIconPath": "static/tabbar/plan-active.png"
       },
       {
         "pagePath": "pages/mine/mine",
         "text": "我的",
-        "iconPath": "static/icon_uni/wode.png",
-        "selectedIconPath": "static/icon_uni/wode.png"
+        "iconPath": "static/tabbar/mine.png",
+        "selectedIconPath": "static/tabbar/mine-active.png"
       }
     ]
   },

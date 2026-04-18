@@ -116,7 +116,7 @@
             </button>
           </view>
         </view>
-        <view v-else class="empty">今天不是训练日，或当前计划暂无待训练动作。</view>
+        <view v-else class="empty">今天不是训练日，或当前计划暂无待训练动作。你也可以在下方课程列表中手动确认完成。</view>
 
         <view class="section-title">计划关联课程</view>
         <view v-if="groupedCourses.length">
@@ -133,13 +133,23 @@
                   当前第 {{ item.courseIndex + 1 }} 节，需付费解锁后查看动作
                 </view>
               </view>
-              <button
-                v-if="item.exerciseId"
-                class="uf-btn-secondary mini-btn"
-                @click="onCourseAction(item)"
-              >
-                {{ isCourseLocked(item.courseIndex) ? '付费解锁' : '查看动作' }}
-              </button>
+              <view class="course-actions">
+                <button
+                  v-if="item.exerciseId"
+                  class="uf-btn-secondary mini-btn"
+                  @click="onCourseAction(item)"
+                >
+                  {{ isCourseLocked(item.courseIndex) ? '付费解锁' : '查看动作' }}
+                </button>
+                <button
+                  v-if="item.id"
+                  class="uf-btn-primary mini-btn"
+                  :disabled="Number(item.completed) === 1"
+                  @click="markItemDone(item)"
+                >
+                  {{ Number(item.completed) === 1 ? '已完成' : '确认完成' }}
+                </button>
+              </view>
             </view>
           </view>
         </view>
@@ -215,10 +225,15 @@ export default {
       const now = new Date()
       const diffDays = Math.floor((now.getTime() - start.getTime()) / (24 * 3600 * 1000))
       if (Number.isNaN(diffDays) || diffDays < 0) return 1
-      return Math.min(4, Math.floor(diffDays / 7) + 1)
+      return Math.min(4, Math.max(1, Math.floor(diffDays / 7) + 1))
     },
     todayPlanItems() {
-      return (this.plan.items || []).filter(item => Number(item.weekNo) === this.currentWeekNo && Number(item.dayNo) === this.todayTrainingDayNo)
+      const rows = this.plan.items || []
+      const exactRows = rows.filter(item => Number(item.weekNo) === this.currentWeekNo && Number(item.dayNo) === this.todayTrainingDayNo)
+      if (exactRows.length) {
+        return exactRows
+      }
+      return rows.filter(item => Number(item.dayNo) === this.todayTrainingDayNo)
     },
     completedTodayCount() {
       return this.todayPlanItems.filter(item => Number(item.completed) === 1).length
@@ -440,19 +455,22 @@ export default {
     },
     fitnessLevelLabel(level) {
       const map = {
-        newbie: '初级',
-        beginner: '初级',
-        basic: '中级',
-        intermediate: '中级',
-        advanced: '高级'
+        newbie: '入门',
+        beginner: '入门',
+        basic: '基础',
+        intermediate: '基础',
+        advanced: '进阶'
       }
       return map[level] || level || '-'
     },
     equipmentTypeLabel(type) {
       const map = {
         bodyweight: '无器械',
+        dorm: '宿舍器械',
+        dorm_equipment: '宿舍器械',
         track: '跑道',
-        gym: '健身房'
+        gym: '健身房',
+        mixed: '综合'
       }
       return map[type] || type || '-'
     },
@@ -601,6 +619,13 @@ export default {
 
 .course-main {
   flex: 1;
+}
+
+.course-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  align-items: flex-end;
 }
 
 .course-title {

@@ -65,13 +65,16 @@
         </view>
       </view>
 
-      <!-- 进行中的计划显示 -->
-      <view v-if="!showGenerateForm && currentPlan" class="section-container">
-        <view class="section-header">当前训练计划</view>
-        <view class="plan-card">
+      <view class="section-container">
+        <view class="section-header row-between plan-header-bar">
+          <text>当前训练计划</text>
+          <button class="btn-primary plan-generate-btn" @click="openGeneratePopup">{{ currentPlan ? '重新生成' : '生成计划' }}</button>
+        </view>
+
+        <view v-if="currentPlan" class="plan-card">
           <view class="plan-header">
-            <view class="plan-title">{{ currentPlan.testItemName }}</view>
-            <view class="plan-status">进行中</view>
+            <view class="plan-title">{{ currentPlan.testItemName || selectedTestItem || '训练计划' }}</view>
+            <view class="plan-status">{{ currentPlan.status === 'completed' ? '已完成' : '进行中' }}</view>
           </view>
           <view class="plan-info">
             <view class="info-row">
@@ -95,71 +98,82 @@
               <text class="info-value">{{ currentPlan.equipmentTypeLabel }}</text>
             </view>
           </view>
-          <view class="plan-actions">
+          <view class="plan-actions single-action">
             <button class="btn-secondary" @click="viewPlanDetails">查看详情</button>
-            <button class="btn-primary" @click="showGenerateForm = true">重新生成计划</button>
           </view>
+        </view>
+
+        <view v-else class="empty-box plan-empty-box">
+          <text class="empty-text">暂无训练计划</text>
+          <text class="empty-hint">点击右上角“生成计划”，填写信息后即可生成</text>
+          <text v-if="debugPlanText" class="plan-debug-text">{{ debugPlanText }}</text>
         </view>
       </view>
 
-      <!-- 计划生成表单 -->
-      <view v-else-if="showGenerateForm" class="section-container">
-        <view class="section-header">生成训练计划</view>
-
-        <!-- 训练项目选择 -->
-        <view class="form-item">
-          <view class="form-label">
-            <uni-icons type="bars" size="18" color="#64748b"></uni-icons>
-            <text>训练项目</text>
-          </view>
-          <picker class="form-picker" :range="testItemOptions" range-key="itemName" @change="onTestItemChange">
-            <view class="picker-value">{{ selectedTestItem || '请选择项目' }}</view>
-          </picker>
-        </view>
-
-        <!-- 当前成绩 -->
-        <view class="form-item">
-          <view class="form-label">
-            <uni-icons type="medal" size="18" color="#64748b"></uni-icons>
-            <text>当前成绩</text>
-          </view>
-          <input class="form-input" v-model="form.currentScore" type="digit" :placeholder="currentScorePlaceholder" />
-          <view class="field-hint" v-if="currentTestItemUnit">单位：{{ currentTestItemUnit }}</view>
-        </view>
-
-        <!-- 体能基础 + 器械条件 -->
-        <view class="form-row">
-          <view class="form-item form-item-half">
-            <view class="form-label">
-              <uni-icons type="heart" size="18" color="#64748b"></uni-icons>
-              <text>体能基础</text>
+      <view v-if="showGeneratePopup" class="plan-popup-mask" @click="closeGeneratePopup">
+        <view class="plan-popup" @click.stop>
+          <view class="plan-popup-header">
+            <view>
+              <view class="plan-popup-title">生成训练计划</view>
+              <view class="plan-popup-subtitle">按你的当前状态生成更匹配的计划</view>
             </view>
-            <picker class="form-picker" :range="fitnessLevelOptions" range-key="label" @change="onFitnessChange">
-              <view class="picker-value">{{ form.fitnessLevelLabel || '请选择' }}</view>
+            <text class="plan-popup-close" @click="closeGeneratePopup">×</text>
+          </view>
+
+          <view class="form-item">
+            <view class="form-label">
+              <uni-icons type="bars" size="18" color="#64748b"></uni-icons>
+              <text>训练项目</text>
+            </view>
+            <picker class="form-picker" :range="testItemOptions" range-key="itemName" @change="onTestItemChange">
+              <view class="picker-value">{{ selectedTestItem || '请选择项目' }}</view>
             </picker>
           </view>
 
-          <view class="form-item form-item-half">
+          <view class="form-item">
             <view class="form-label">
-              <uni-icons type="settings" size="18" color="#64748b"></uni-icons>
-              <text>器械条件</text>
+              <uni-icons type="medal" size="18" color="#64748b"></uni-icons>
+              <text>当前成绩</text>
             </view>
-            <picker class="form-picker" :range="equipmentTypeOptions" range-key="label" @change="onEquipmentChange">
-              <view class="picker-value">{{ form.equipmentTypeLabel || '请选择' }}</view>
-            </picker>
+            <input class="form-input" v-model="form.currentScore" type="digit" :placeholder="currentScorePlaceholder" />
+            <view class="field-hint" v-if="currentTestItemUnit">单位：{{ currentTestItemUnit }}</view>
+          </view>
+
+          <view class="form-row">
+            <view class="form-item form-item-half">
+              <view class="form-label">
+                <uni-icons type="heart" size="18" color="#64748b"></uni-icons>
+                <text>体能基础</text>
+              </view>
+              <picker class="form-picker" :range="fitnessLevelOptions" range-key="label" @change="onFitnessChange">
+                <view class="picker-value">{{ form.fitnessLevelLabel || '请选择' }}</view>
+              </picker>
+            </view>
+
+            <view class="form-item form-item-half">
+              <view class="form-label">
+                <uni-icons type="settings" size="18" color="#64748b"></uni-icons>
+                <text>器械条件</text>
+              </view>
+              <picker class="form-picker" :range="equipmentTypeOptions" range-key="label" @change="onEquipmentChange">
+                <view class="picker-value">{{ form.equipmentTypeLabel || '请选择' }}</view>
+              </picker>
+            </view>
+          </view>
+
+          <view class="form-item">
+            <view class="form-label">
+              <uni-icons type="calendar" size="18" color="#64748b"></uni-icons>
+              <text>每周训练天数</text>
+            </view>
+            <input class="form-input" v-model="form.daysPerWeek" type="number" placeholder="请输入天数（1-7）" />
+          </view>
+
+          <view class="plan-popup-actions">
+            <button class="btn-secondary" @click="closeGeneratePopup">取消</button>
+            <button class="btn-primary" @click="generate">生成训练计划</button>
           </view>
         </view>
-
-        <!-- 每周训练天数 -->
-        <view class="form-item">
-          <view class="form-label">
-            <uni-icons type="calendar" size="18" color="#64748b"></uni-icons>
-            <text>每周训练天数</text>
-          </view>
-          <input class="form-input" v-model="form.daysPerWeek" type="number" placeholder="请输入天数（1-7）" />
-        </view>
-
-        <button class="btn-primary btn-full" @click="generate">生成训练计划</button>
       </view>
     </template>
   </view>
@@ -188,20 +202,22 @@ export default {
       },
       testItemOptions: [],
       fitnessLevelOptions: [
-        { value: 'newbie', label: '初级' },
-        { value: 'basic', label: '中级' },
-        { value: 'advanced', label: '高级' }
+        { value: 'newbie', label: '入门' },
+        { value: 'basic', label: '基础' },
+        { value: 'advanced', label: '进阶' }
       ],
       equipmentTypeOptions: [
         { value: 'bodyweight', label: '无器械' },
+        { value: 'dorm', label: '宿舍器械' },
         { value: 'track', label: '跑道' },
-        { value: 'gym', label: '健身房' }
+        { value: 'gym', label: '健身房' },
+        { value: 'mixed', label: '综合' }
       ],
       form: {
         testItemCode: '',
         currentScore: '',
         fitnessLevel: 'newbie',
-        fitnessLevelLabel: '初级',
+        fitnessLevelLabel: '入门',
         equipmentType: 'bodyweight',
         equipmentTypeLabel: '无器械',
         daysPerWeek: '3',
@@ -210,8 +226,9 @@ export default {
       selectedTestItem: '',
       studentProfile: {},
       needStudentVerify: false,
-      showGenerateForm: false,
-      currentPlan: null
+      showGeneratePopup: false,
+      currentPlan: null,
+      debugPlanText: ''
     }
   },
   computed: {
@@ -243,6 +260,10 @@ export default {
     if (this.isAdminRole) {
       await this.loadAdminOverview()
       return
+    }
+    const cachedPlan = this.readCachedPlan()
+    if (cachedPlan) {
+      this.currentPlan = cachedPlan
     }
     const verified = await this.loadStudentVerifyStatus()
     await Promise.allSettled([this.loadTestItems(), this.loadHealthBmi(), this.loadCurrentPlan()])
@@ -356,7 +377,12 @@ export default {
         uni.showToast({ title: '请选择训练项目', icon: 'none' })
         return null
       }
-      const currentScore = Number(this.form.currentScore)
+      const rawScore = String(this.form.currentScore ?? '').trim()
+      if (!rawScore) {
+        uni.showToast({ title: '请先输入当前成绩', icon: 'none' })
+        return null
+      }
+      const currentScore = Number(rawScore)
       if (!Number.isFinite(currentScore) || currentScore < 0) {
         uni.showToast({ title: '请输入有效成绩', icon: 'none' })
         return null
@@ -402,6 +428,14 @@ export default {
             bmiValue: payload.bmiValue === null || payload.bmiValue === '' ? null : Number(payload.bmiValue)
           }
         })
+        generatedPlan = this.ensureRenderablePlan(generatedPlan)
+        const renderPlan = this.normalizePlan(generatedPlan, payload)
+        this.debugPlanText = `generate返回: ${JSON.stringify(generatedPlan)}`
+        console.log('[plan-page] generate result', generatedPlan)
+        console.log('[plan-page] render plan', renderPlan)
+        this.cacheCurrentPlan(renderPlan)
+        this.currentPlan = renderPlan
+        this.showGeneratePopup = false
         uni.showToast({ title: '计划已生成', icon: 'success' })
         setTimeout(() => {
           this.go(`/pages/plan/current?planId=${generatedPlan && generatedPlan.planId ? generatedPlan.planId : ''}`)
@@ -417,7 +451,7 @@ export default {
               balance: purchaseResult && purchaseResult.balance !== undefined ? purchaseResult.balance : localUser.balance,
               planUnlocked: purchaseResult && purchaseResult.planUnlocked !== undefined ? purchaseResult.planUnlocked : localUser.planUnlocked
             })
-            const generatedPlan = await request({
+            let generatedPlan = await request({
               url: '/plan/generate',
               method: 'POST',
               data: {
@@ -429,6 +463,14 @@ export default {
                 bmiValue: payload.bmiValue === null || payload.bmiValue === '' ? null : Number(payload.bmiValue)
               }
             })
+            generatedPlan = this.ensureRenderablePlan(generatedPlan)
+            const renderPlan = this.normalizePlan(generatedPlan, payload)
+            this.debugPlanText = `purchase后generate返回: ${JSON.stringify(generatedPlan)}`
+            console.log('[plan-page] generate result after purchase', generatedPlan)
+            console.log('[plan-page] render plan after purchase', renderPlan)
+            this.cacheCurrentPlan(renderPlan)
+            this.currentPlan = renderPlan
+            this.showGeneratePopup = false
             uni.showToast({ title: '计划已生成', icon: 'success' })
             setTimeout(() => {
               this.go(`/pages/plan/current?planId=${generatedPlan && generatedPlan.planId ? generatedPlan.planId : ''}`)
@@ -441,48 +483,123 @@ export default {
         uni.showToast({ title: message || '生成失败', icon: 'none' })
       }
     },
-    async loadCurrentPlan() {
-      try {
-        const plan = await request({ url: '/plan/current', showError: false })
-        if (plan) {
-          this.currentPlan = {
-            ...plan,
-            testItemName: this.testItemLabel(plan.testItemCode),
-            targetScore: this.targetScoreText(plan.scoreLevel),
-            currentScore: this.currentScoreText(plan),
-            fitnessLevelLabel: this.fitnessLevelText(plan.fitnessLevel),
-            equipmentTypeLabel: this.equipmentTypeText(plan.equipmentType)
-          }
-          this.showGenerateForm = false
-        } else {
-          this.currentPlan = null
-          this.showGenerateForm = true
-        }
-      } catch (error) {
-        this.currentPlan = null
-        this.showGenerateForm = true
+    getPlanCacheKey() {
+      return `unifit_current_plan_${this.user.id || 'guest'}`
+    },
+    ensureRenderablePlan(plan) {
+      if (!plan) return null
+      if (plan.planId) return plan
+      if (plan.id) {
+        return { ...plan, planId: plan.id }
+      }
+      return plan
+    },
+    buildDraftPlan(payload, plan) {
+      const basePlan = this.ensureRenderablePlan(plan) || {}
+      const scoreLevel = basePlan.scoreLevel || 'beginner'
+      const snapshot = basePlan.snapshot || {
+        currentScore: payload ? payload.currentScore : ''
+      }
+      return {
+        ...basePlan,
+        planId: basePlan.planId || `draft-${Date.now()}`,
+        testItemCode: basePlan.testItemCode || (payload ? payload.testItemCode : ''),
+        scoreLevel,
+        fitnessLevel: basePlan.fitnessLevel || (payload ? payload.fitnessLevel : ''),
+        equipmentType: basePlan.equipmentType || (payload ? payload.equipmentType : ''),
+        daysPerWeek: basePlan.daysPerWeek || (payload ? payload.daysPerWeek : ''),
+        snapshot,
+        status: basePlan.status || 'active'
       }
     },
-    viewPlanDetails() {
-      if (this.currentPlan && this.currentPlan.planId) {
-        this.go(`/pages/plan/current?planId=${this.currentPlan.planId}`)
+    normalizePlan(plan, payload) {
+      const safePlan = this.ensureRenderablePlan(plan) || this.buildDraftPlan(payload, plan)
+      if (!safePlan) return null
+      return {
+        ...safePlan,
+        testItemName: this.testItemLabel(safePlan.testItemCode) || this.selectedTestItem || '训练计划',
+        targetScore: this.targetScoreText(safePlan.scoreLevel),
+        currentScore: this.currentScoreText(safePlan),
+        fitnessLevelLabel: this.fitnessLevelText(safePlan.fitnessLevel),
+        equipmentTypeLabel: this.equipmentTypeText(safePlan.equipmentType)
       }
+    },
+    cacheCurrentPlan(plan) {
+      if (!plan) return
+      uni.setStorageSync(this.getPlanCacheKey(), plan)
+    },
+    readCachedPlan() {
+      return uni.getStorageSync(this.getPlanCacheKey()) || null
+    },
+    async loadCurrentPlan() {
+      try {
+        let plan = await request({ url: '/plan/current', showError: false }).catch(() => null)
+        if (!plan) {
+          const plans = await request({ url: '/plan/list', showError: false }).catch(() => []) || []
+          plan = plans.find(item => item && item.status === 'active') || plans[plans.length - 1] || null
+        }
+        if (!plan) {
+          plan = this.readCachedPlan()
+        }
+        if (plan) {
+          const renderPlan = this.normalizePlan(plan)
+          this.debugPlanText = `loadCurrentPlan命中: ${JSON.stringify(plan)}`
+          console.log('[plan-page] loadCurrentPlan source plan', plan)
+          console.log('[plan-page] loadCurrentPlan renderPlan', renderPlan)
+          this.currentPlan = renderPlan
+          this.cacheCurrentPlan(renderPlan)
+        } else {
+          this.debugPlanText = 'loadCurrentPlan未拿到计划'
+          console.log('[plan-page] loadCurrentPlan empty')
+          this.currentPlan = null
+        }
+      } catch (error) {
+        const cached = this.readCachedPlan()
+        this.debugPlanText = `loadCurrentPlan异常: ${error && error.message ? error.message : error}`
+        console.log('[plan-page] loadCurrentPlan error', error)
+        console.log('[plan-page] loadCurrentPlan cached', cached)
+        this.currentPlan = cached ? this.normalizePlan(cached) : null
+      }
+    },
+    openGeneratePopup() {
+      if (this.ensureStudentVerifiedAction()) {
+        return
+      }
+      this.showGeneratePopup = true
+    },
+    closeGeneratePopup() {
+      this.showGeneratePopup = false
+    },
+    viewPlanDetails() {
+      if (this.currentPlan && this.currentPlan.planId && !String(this.currentPlan.planId).startsWith('draft-')) {
+        this.go(`/pages/plan/current?planId=${this.currentPlan.planId}`)
+        return
+      }
+      uni.showToast({ title: '计划详情同步中，请稍后再试', icon: 'none' })
+    },
+    testItemLabel(code) {
+      if (!code) return '-'
+      const row = this.testItemOptions.find(item => item.itemCode === code)
+      return row ? row.itemName : (this.selectedTestItem || code)
     },
     fitnessLevelText(value) {
       const map = {
-        newbie: '初级',
-        beginner: '初级',
-        basic: '中级',
-        intermediate: '中级',
-        advanced: '高级'
+        newbie: '入门',
+        beginner: '入门',
+        basic: '基础',
+        intermediate: '基础',
+        advanced: '进阶'
       }
       return map[value] || value || '-'
     },
     equipmentTypeText(value) {
       const map = {
         bodyweight: '无器械',
+        dorm: '宿舍器械',
+        dorm_equipment: '宿舍器械',
         track: '跑道',
-        gym: '健身房'
+        gym: '健身房',
+        mixed: '综合'
       }
       return map[value] || value || '-'
     },
@@ -531,6 +648,13 @@ export default {
   font-size: 28rpx;
   font-weight: 600;
   color: $text-primary;
+}
+
+.plan-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12rpx;
 }
 
 .custom-list {
@@ -748,6 +872,16 @@ export default {
   margin: 0 20rpx;
 }
 
+.plan-generate-btn {
+  width: auto;
+  min-width: 172rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0 22rpx;
+  font-size: 24rpx;
+  border-radius: 999rpx;
+}
+
 .btn-link {
   margin-top: 10rpx;
   background: transparent;
@@ -861,6 +995,86 @@ export default {
 }
 
 .plan-actions {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 20rpx;
+
+  button {
+    flex: 1;
+  }
+}
+
+.single-action {
+  button {
+    flex: none;
+    width: 100%;
+  }
+}
+
+.plan-empty-box {
+  margin: 16rpx 20rpx 20rpx;
+}
+
+.plan-debug-text {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
+  color: #94a3b8;
+  word-break: break-all;
+}
+
+.plan-popup-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 999;
+}
+
+.plan-popup {
+  width: 100%;
+  max-height: 84vh;
+  background: #fff;
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 24rpx 24rpx 32rpx;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.plan-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20rpx;
+}
+
+.plan-popup-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.plan-popup-subtitle {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: $text-secondary;
+}
+
+.plan-popup-close {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 24rpx;
+  background: #f3f4f6;
+  text-align: center;
+  line-height: 48rpx;
+  font-size: 32rpx;
+  color: $text-secondary;
+}
+
+.plan-popup-actions {
   display: flex;
   gap: 12rpx;
   margin-top: 20rpx;

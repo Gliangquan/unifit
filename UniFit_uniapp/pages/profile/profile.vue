@@ -21,7 +21,14 @@
 
       <uni-section title="BMI历史记录" class="section"></uni-section>
       <uni-card :border="false" padding="24">
-        <canvas id="bmiTrendCanvas" canvas-id="bmiTrendCanvas" class="bmi-chart"></canvas>
+        <canvas
+          id="bmiTrendCanvas"
+          canvas-id="bmiTrendCanvas"
+          class="bmi-chart"
+          :style="{ width: chartCanvasWidth + 'px', height: chartCanvasHeight + 'px' }"
+          :width="chartCanvasWidth"
+          :height="chartCanvasHeight"
+        ></canvas>
         <uni-list :border="false" v-if="records.length">
           <uni-list-item
             v-for="(item, idx) in records.slice(0, 20)"
@@ -56,7 +63,9 @@ export default {
       user: {},
       health: {},
       studentProfile: {},
-      records: []
+      records: [],
+      chartCanvasWidth: 0,
+      chartCanvasHeight: 0
     }
   },
   computed: {
@@ -128,13 +137,18 @@ export default {
         const tb = new Date(b.recordDate || b.createTime || 0).getTime()
         return tb - ta
       })
-      setTimeout(() => this.drawBmiChart(), 100)
+      this.updateChartSize()
+      setTimeout(() => this.drawBmiChart(), 120)
+    },
+    updateChartSize() {
+      const screenWidth = uni.getSystemInfoSync().windowWidth
+      this.chartCanvasWidth = Math.max(280, Math.floor(screenWidth - 80))
+      this.chartCanvasHeight = 220
     },
     drawBmiChart() {
       const ctx = uni.createCanvasContext('bmiTrendCanvas', this)
-      const screenWidth = uni.getSystemInfoSync().windowWidth
-      const width = screenWidth - 80
-      const height = 220
+      const width = this.chartCanvasWidth || Math.max(280, Math.floor(uni.getSystemInfoSync().windowWidth - 80))
+      const height = this.chartCanvasHeight || 220
       const left = 36
       const right = width - 16
       const top = 16
@@ -202,8 +216,9 @@ export default {
 
 <style lang="scss" scoped>
 .bmi-chart {
+  display: block;
   width: 100%;
-  height: 220rpx;
+  height: 220px;
   margin-bottom: 20rpx;
   border-radius: 12rpx;
   background: #f8fafc;

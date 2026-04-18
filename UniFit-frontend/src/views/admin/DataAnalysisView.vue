@@ -1,6 +1,6 @@
 <template>
   <div class="data-analysis">
-    <a-tabs v-model:activeKey="activeTab">
+    <a-tabs v-model:activeKey="activeTab" destroyInactiveTabPane>
       <!-- 体测数据分析 -->
       <a-tab-pane key="test-data" tab="体测数据分析">
         <TestDataAnalysis />

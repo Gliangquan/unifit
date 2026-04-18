@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.List;
+import java.util.LinkedHashMap;
 
 @Service
 public class ExerciseServiceImpl implements ExerciseService {
@@ -148,6 +149,36 @@ public class ExerciseServiceImpl implements ExerciseService {
             fillPublishUserName(Collections.singletonList(exercise));
         }
         return exercise;
+    }
+
+    @Override
+    public List<Map<String, String>> listCategoryOptions() {
+        List<Exercise> exercises = exerciseMapper.selectList(new QueryWrapper<Exercise>()
+                .select("category")
+                .eq("status", 1)
+                .isNotNull("category")
+                .ne("category", "")
+                .orderByAsc("id"));
+        LinkedHashMap<String, String> options = new LinkedHashMap<>();
+        for (Exercise exercise : exercises) {
+            String raw = StringUtils.trimToEmpty(exercise.getCategory());
+            if (StringUtils.isBlank(raw)) {
+                continue;
+            }
+            String normalized = normalizeCategory(raw);
+            if (StringUtils.isBlank(normalized)) {
+                continue;
+            }
+            options.putIfAbsent(normalized, categoryLabel(normalized));
+        }
+        List<Map<String, String>> result = new ArrayList<>();
+        for (Map.Entry<String, String> entry : options.entrySet()) {
+            Map<String, String> row = new HashMap<>();
+            row.put("value", entry.getKey());
+            row.put("label", entry.getValue());
+            result.add(row);
+        }
+        return result;
     }
 
     @Override
@@ -480,6 +511,23 @@ public class ExerciseServiceImpl implements ExerciseService {
                 return "强化";
             default:
                 return difficulty.trim();
+        }
+    }
+
+    private String categoryLabel(String category) {
+        String normalized = normalizeCategory(category);
+        switch (normalized) {
+            case "上肢":
+            case "下肢":
+            case "核心":
+            case "有氧":
+            case "有氧操":
+            case "恢复":
+            case "八段锦":
+            case "瑜伽":
+                return normalized;
+            default:
+                return normalized;
         }
     }
 

@@ -3,9 +3,9 @@ spring:
     name: unifit-backend
 
   datasource:
-    url: ${DATASOURCE_URL:jdbc:mysql://localhost:3306/unifit?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
-    username: ${DATASOURCE_USERNAME:root}
-    password: ${DATASOURCE_PASSWORD:liangquan0302}
+    url: jdbc:mysql://127.0.0.1:3307/unifit?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
+    username: root
+    password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jackson:
@@ -30,7 +30,7 @@ mybatis-plus:
       id-type: auto
 
 server:
-  port: ${SERVER_PORT:9901}
+  port: ${SERVER_PORT:19921}
   servlet:
     context-path: /api
 

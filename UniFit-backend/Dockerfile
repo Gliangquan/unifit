@@ -10,5 +10,5 @@ FROM node:20-alpine
 WORKDIR /app
 RUN apk add --no-cache openjdk11-jre
 COPY --from=builder /app/target/*.jar app.jar
-EXPOSE 9020
+EXPOSE 19921
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

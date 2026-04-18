@@ -108,6 +108,15 @@
           <a-form-item label="简介">
             <a-textarea v-model:value="form.description" :rows="2" placeholder="简要描述" />
           </a-form-item>
+          <a-form-item label="示范视频">
+            <a-space direction="vertical" style="width: 100%">
+              <a-input v-model:value="form.demoVideoUrl" placeholder="示范视频 URL（可手填）" />
+              <a-upload :show-upload-list="false" :custom-request="uploadDemoVideo">
+                <a-button :loading="demoVideoUploading">上传示范视频</a-button>
+              </a-upload>
+              <video v-if="form.demoVideoUrl" :src="form.demoVideoUrl" class="demo-video-preview" controls />
+            </a-space>
+          </a-form-item>
           <a-form-item label="Markdown 内容">
             <a-space style="margin-bottom: 8px">
               <a-upload :show-upload-list="false" :custom-request="uploadContentImage">
@@ -286,6 +295,7 @@ const form = reactive<any>({
   description: '',
   coverImageUrl: '',
   contentMd: '',
+  demoVideoUrl: '',
   status: 1,
 });
 const equipmentValues = ref<string[]>([]);
@@ -298,6 +308,7 @@ const commentSubmitting = ref(false);
 const likeState = reactive({ liked: false, likeCount: 0 });
 
 const coverUploading = ref(false);
+const demoVideoUploading = ref(false);
 const contentUploadingImage = ref(false);
 const contentUploadingVideo = ref(false);
 
@@ -382,6 +393,7 @@ const openModal = (row?: Exercise) => {
       description: '',
       coverImageUrl: '',
       contentMd: '',
+      demoVideoUrl: '',
       status: 1,
     });
     equipmentValues.value = [];
@@ -400,6 +412,7 @@ const save = async () => {
     description: form.description?.trim(),
     equipmentRequired: equipmentValues.value.length ? equipmentValues.value.join('、') : undefined,
     contentMd: form.contentMd || '',
+    demoVideoUrl: form.demoVideoUrl?.trim() || undefined,
     coverImageUrl: form.coverImageUrl?.trim() || undefined,
     status: 1,
   });
@@ -430,6 +443,20 @@ const uploadCover = async (options: any) => {
     options.onError?.(e);
   } finally {
     coverUploading.value = false;
+  }
+};
+
+const uploadDemoVideo = async (options: any) => {
+  demoVideoUploading.value = true;
+  try {
+    const url = await uploadByType(options.file as File, 'exercise-demo-video');
+    form.demoVideoUrl = url;
+    message.success('示范视频上传成功');
+    options.onSuccess?.(url);
+  } catch (e) {
+    options.onError?.(e);
+  } finally {
+    demoVideoUploading.value = false;
   }
 };
 
@@ -533,6 +560,13 @@ onMounted(load);
   height: 120px;
   object-fit: cover;
   border-radius: 6px;
+}
+
+.demo-video-preview {
+  width: 260px;
+  max-width: 100%;
+  border-radius: 6px;
+  background: #000;
 }
 
 .preview-wrap {

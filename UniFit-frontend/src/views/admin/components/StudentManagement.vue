@@ -136,7 +136,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
-import { listUsers, getUserDetail, updateUser, deleteUser as deleteUserApi } from '../../../api';
+import { listUsers, getUserDetail, updateUser, updateUserStatus, deleteUser as deleteUserApi } from '../../../api';
 
 const loading = ref(false);
 const editLoading = ref(false);
@@ -215,7 +215,7 @@ const resetQuery = () => {
 const toggleStatus = async (record) => {
   try {
     const newStatus = record.status === 1 ? 0 : 1;
-    await updateUser(record.id, undefined, undefined, undefined);
+    await updateUserStatus(record.id, newStatus);
     message.success('状态更新成功');
     await load();
   } catch (error) {

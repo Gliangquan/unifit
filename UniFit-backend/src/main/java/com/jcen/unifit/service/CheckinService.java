@@ -14,6 +14,8 @@ public interface CheckinService {
 
     int getStreakDays(User loginUser);
 
+    List<Map<String, Object>> getCalendarCheckins(User loginUser, int limitDays);
+
     List<CheckinRankVO> getRanking(int limitDays, int topN);
 
     List<ClassChallengeVO> getClassChallengeRanking(int limitDays, int topN);

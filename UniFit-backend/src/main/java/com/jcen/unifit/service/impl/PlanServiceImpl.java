@@ -325,22 +325,11 @@ public class PlanServiceImpl implements PlanService {
 
         List<UserPlanItem> result = new ArrayList<>();
         for (PlanTemplateItem item : templateItems) {
-            Long selectedExerciseId = chooseExerciseForStage(item, alternativeMap, exerciseMap, normalizedFitnessLevel);
+            Long selectedExerciseId = item.getExerciseId();
             Exercise exercise = exerciseMap.get(selectedExerciseId);
-            Exercise personalizedExercise = pickPersonalizedExercise(
-                    item,
-                    exercise,
-                    alternativeMap.getOrDefault(item.getExerciseId(), List.of()),
-                    activeExercises,
-                    testItemCode,
-                    normalizedEquipmentType,
-                    targetDifficultyRank,
-                    daysPerWeek
-            );
-            if (personalizedExercise != null) {
-                selectedExerciseId = personalizedExercise.getId();
-                exercise = personalizedExercise;
-                exerciseMap.putIfAbsent(personalizedExercise.getId(), personalizedExercise);
+            if (exercise == null) {
+                selectedExerciseId = chooseExerciseForStage(item, alternativeMap, exerciseMap, normalizedFitnessLevel);
+                exercise = exerciseMap.get(selectedExerciseId);
             }
 
             int sets = scaleMetric(item.getSetsCount(), 1D + 0.12D * Math.max(0, Math.min(3, safeWeek(item.getWeekNo()) - 1)), 1, 50);

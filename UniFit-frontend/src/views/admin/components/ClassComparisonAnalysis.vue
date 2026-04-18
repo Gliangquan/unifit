@@ -93,12 +93,18 @@ const bindResize = (chart) => {
   resizeHandlers.push(handler);
 };
 
+const initChart = (dom) => {
+  if (!dom) return null;
+  const instance = echarts.getInstanceByDom(dom);
+  return instance || echarts.init(dom);
+};
+
 const drawChart = async () => {
   await nextTick();
   const dom = document.getElementById('classComparisonChart');
   if (!dom) return;
   chartInstance?.dispose();
-  chartInstance = echarts.init(dom);
+  chartInstance = initChart(dom);
   chartInstance.setOption({
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: visibleRows.value.map((item) => item.className) },

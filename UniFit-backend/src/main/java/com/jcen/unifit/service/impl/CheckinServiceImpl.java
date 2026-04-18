@@ -131,6 +131,28 @@ public class CheckinServiceImpl implements CheckinService {
     }
 
     @Override
+    public List<Map<String, Object>> getCalendarCheckins(User loginUser, int limitDays) {
+        ensureStudentVerified(loginUser);
+        LocalDate from = LocalDate.now().minusDays(Math.max(limitDays, 1) - 1L);
+        Date fromDate = Date.from(from.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        List<Checkin> list = checkinMapper.selectList(new QueryWrapper<Checkin>()
+                .eq("user_id", loginUser.getId())
+                .ge("checkin_date", fromDate)
+                .orderByDesc("checkin_date"));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Checkin item : list) {
+            Map<String, Object> row = new HashMap<>();
+            LocalDate localDate = item.getCheckinDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            row.put("date", localDate.toString());
+            row.put("info", "已打卡");
+            row.put("durationMinutes", item.getDurationMinutes());
+            row.put("userPlanId", item.getUserPlanId());
+            result.add(row);
+        }
+        return result;
+    }
+
+    @Override
     public List<CheckinRankVO> getRanking(int limitDays, int topN) {
         LocalDate from = LocalDate.now().minusDays(Math.max(limitDays, 1) - 1L);
         Date fromDate = Date.from(from.atStartOfDay(ZoneId.systemDefault()).toInstant());

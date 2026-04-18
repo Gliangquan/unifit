@@ -54,6 +54,12 @@ const bindResize = (chart) => {
   resizeHandlers.push(handler);
 };
 
+const initChart = (dom) => {
+  if (!dom) return null;
+  const instance = echarts.getInstanceByDom(dom);
+  return instance || echarts.init(dom);
+};
+
 const drawCharts = async () => {
   await nextTick();
   const trendDom = document.getElementById('checkinTrendChartAnalysis');
@@ -63,7 +69,7 @@ const drawCharts = async () => {
   trendChart?.dispose();
   timeChart?.dispose();
 
-  trendChart = echarts.init(trendDom);
+  trendChart = initChart(trendDom);
   trendChart.setOption({
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: trendData.value.map((item) => item.date) },
@@ -72,7 +78,7 @@ const drawCharts = async () => {
   });
   bindResize(trendChart);
 
-  timeChart = echarts.init(timeDom);
+  timeChart = initChart(timeDom);
   timeChart.setOption({
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: timeDistribution.value.map((item) => item.label) },

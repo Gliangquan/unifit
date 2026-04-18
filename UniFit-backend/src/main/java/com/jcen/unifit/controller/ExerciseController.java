@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/exercise")
@@ -46,6 +47,11 @@ public class ExerciseController {
     @GetMapping("/get")
     public BaseResponse<Exercise> getById(@RequestParam Long id) {
         return ResultUtils.success(exerciseService.getById(id));
+    }
+
+    @GetMapping("/categories")
+    public BaseResponse<List<Map<String, String>>> listCategories() {
+        return ResultUtils.success(exerciseService.listCategoryOptions());
     }
 
     @GetMapping("/alternatives")

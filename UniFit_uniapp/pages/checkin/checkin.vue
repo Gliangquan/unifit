@@ -12,7 +12,16 @@
     </view>
 
     <view v-if="!isAdminRole" class="uf-card uf-fade-up" style="margin-top: 20rpx;">
-      <view class="uf-section-title">提交今日打卡</view>
+      <view class="row-between">
+        <view class="uf-section-title" style="margin:0">今日打卡</view>
+        <text class="hint">近30天</text>
+      </view>
+      <uni-calendar
+        :insert="true"
+        :selected="calendarCheckins"
+        :showMonth="false"
+      />
+      <view class="checkin-tip">橙点表示已打卡，点击下方按钮完成今日训练打卡。</view>
       <input class="uf-input" v-model="duration" type="number" placeholder="本次运动时长(分钟)" />
       <button class="uf-btn-primary" @click="doCheckin">完成打卡</button>
     </view>
@@ -76,7 +85,8 @@ export default {
       rankingDays: 7,
       classRanking: [],
       myClassChallenge: {},
-      currentPlan: null
+      currentPlan: null,
+      calendarCheckins: []
     }
   },
   computed: {
@@ -111,18 +121,20 @@ export default {
         this.streak = 0
         return
       }
-      const [streak, ranking, classRanking, myClassChallenge, currentPlan] = await Promise.all([
+      const [streak, ranking, classRanking, myClassChallenge, currentPlan, calendarCheckins] = await Promise.all([
         request({ url: '/checkin/streak', showError: false }),
         rankingPromise,
         classRankingPromise,
         request({ url: `/checkin/challenge/my-class?days=${this.rankingDays}`, showError: false }).catch(() => ({})),
-        request({ url: '/plan/current', showError: false }).catch(() => null)
+        request({ url: '/plan/current', showError: false }).catch(() => null),
+        request({ url: '/checkin/calendar?days=30', showError: false }).catch(() => [])
       ])
       this.streak = streak || 0
       this.ranking = ranking || []
       this.classRanking = classRanking || []
       this.myClassChallenge = myClassChallenge || {}
       this.currentPlan = currentPlan || null
+      this.calendarCheckins = calendarCheckins || []
     },
     async doCheckin() {
       if (!this.currentPlan || !this.currentPlan.planId) {
@@ -207,6 +219,13 @@ export default {
 .hint {
   color: $text-secondary;
   font-size: 24rpx;
+}
+
+.checkin-tip {
+  margin: 12rpx 0 16rpx;
+  font-size: 22rpx;
+  color: $text-secondary;
+  line-height: 1.6;
 }
 
 .rank-row {

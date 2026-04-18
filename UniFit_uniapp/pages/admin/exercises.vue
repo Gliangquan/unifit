@@ -6,7 +6,10 @@
       <input class="uf-input" v-model="form.category" placeholder="分类" />
       <input class="uf-input" v-model="form.difficulty" placeholder="难度" />
       <input class="uf-input" v-model="form.equipmentRequired" placeholder="器械" />
+      <input class="uf-input" v-model="form.coverImageUrl" placeholder="封面图URL" />
+      <input class="uf-input" v-model="form.demoVideoUrl" placeholder="示范视频URL" />
       <textarea class="uf-input area" v-model="form.description" placeholder="描述" />
+      <textarea class="uf-input area" v-model="form.contentMd" placeholder="Markdown内容，可选" />
       <view class="ops">
         <button class="uf-btn-primary" @click="save">{{ form.id ? '更新动作' : '新增动作' }}</button>
         <button class="uf-btn-secondary" @click="resetForm">重置</button>
@@ -79,7 +82,10 @@ const emptyForm = () => ({
   category: '',
   difficulty: '',
   equipmentRequired: '',
+  coverImageUrl: '',
+  demoVideoUrl: '',
   description: '',
+  contentMd: '',
   status: 1
 })
 

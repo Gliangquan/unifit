@@ -43,6 +43,13 @@ public class CheckinController {
         return ResultUtils.success(checkinService.getStreakDays(loginUser));
     }
 
+    @GetMapping("/calendar")
+    public BaseResponse<List<Map<String, Object>>> calendar(@RequestParam(defaultValue = "30") int days,
+                                                            HttpServletRequest httpServletRequest) {
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        return ResultUtils.success(checkinService.getCalendarCheckins(loginUser, days));
+    }
+
     @GetMapping("/ranking")
     public BaseResponse<List<CheckinRankVO>> ranking(@RequestParam(defaultValue = "7") int days,
                                                      @RequestParam(defaultValue = "20") int topN) {

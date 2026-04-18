@@ -78,7 +78,14 @@
           </view>
         </view>
 
-        <canvas id="testTrendCanvas" canvas-id="testTrendCanvas" class="chart-canvas" style="width: 100%; height: 300rpx;"></canvas>
+        <canvas
+          id="testTrendCanvas"
+          canvas-id="testTrendCanvas"
+          class="chart-canvas"
+          :style="{ width: chartCanvasWidth + 'px', height: chartCanvasHeight + 'px' }"
+          :width="chartCanvasWidth"
+          :height="chartCanvasHeight"
+        ></canvas>
         <view v-if="!chartHistory.length" class="empty">当前项目暂无历史成绩。</view>
       </view>
 
@@ -195,7 +202,9 @@ export default {
         latest: '--',
         best: '--',
         change: '--'
-      }
+      },
+      chartCanvasWidth: 0,
+      chartCanvasHeight: 0
     }
   },
   computed: {
@@ -328,16 +337,17 @@ export default {
     async loadChartHistory() {
       if (!this.form.itemCode) {
         this.chartHistory = []
+        this.updateChartSize()
         this.drawTrendChart()
         return
       }
       const data = await request({ url: `/test/score/history?itemCode=${this.form.itemCode}`, showError: false })
       this.chartHistory = (data || []).slice().reverse()
       this.computeMetrics()
-      // 延迟绘制，确保 DOM 已经渲染
+      this.updateChartSize()
       setTimeout(() => {
         this.drawTrendChart()
-      }, 100)
+      }, 120)
     },
     computeMetrics() {
       const values = this.chartHistory.map(i => Number(i.scoreValue)).filter(v => !Number.isNaN(v))
@@ -357,12 +367,15 @@ export default {
         change: signedDelta
       }
     },
+    updateChartSize() {
+      const screenWidth = uni.getSystemInfoSync().windowWidth
+      this.chartCanvasWidth = Math.max(300, Math.floor(screenWidth - 64))
+      this.chartCanvasHeight = 300
+    },
     drawTrendChart() {
       const ctx = uni.createCanvasContext('testTrendCanvas', this)
-      // 获取实际的 Canvas 宽高（需要根据屏幕宽度计算）
-      const screenWidth = uni.getSystemInfoSync().windowWidth
-      const width = screenWidth - 64 // 减去左右 padding (32rpx = 16px)
-      const height = 300
+      const width = this.chartCanvasWidth || Math.max(300, Math.floor(uni.getSystemInfoSync().windowWidth - 64))
+      const height = this.chartCanvasHeight || 300
       const left = 50
       const right = width - 30
       const top = 20
@@ -568,8 +581,9 @@ export default {
 }
 
 .chart-canvas {
+  display: block;
   width: 100%;
-  height: 300rpx;
+  height: 300px;
   margin-top: $spacing-md;
   border-radius: $radius-md;
   background: $primary-light;

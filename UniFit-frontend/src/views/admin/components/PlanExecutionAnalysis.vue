@@ -60,6 +60,12 @@ const bindResize = (chart) => {
   resizeHandlers.push(handler);
 };
 
+const initChart = (dom) => {
+  if (!dom) return null;
+  const instance = echarts.getInstanceByDom(dom);
+  return instance || echarts.init(dom);
+};
+
 const drawCharts = async () => {
   await nextTick();
   const progressDom = document.getElementById('planTrendChartAnalysis');
@@ -69,7 +75,7 @@ const drawCharts = async () => {
   progressChart?.dispose();
   difficultyChart?.dispose();
 
-  progressChart = echarts.init(progressDom);
+  progressChart = initChart(progressDom);
   progressChart.setOption({
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: tableData.value.map((item) => `#${item.planId}`) },
@@ -78,7 +84,7 @@ const drawCharts = async () => {
   });
   bindResize(progressChart);
 
-  difficultyChart = echarts.init(difficultyDom);
+  difficultyChart = initChart(difficultyDom);
   difficultyChart.setOption({
     tooltip: { trigger: 'item' },
     series: [{ type: 'pie', radius: '55%', data: difficultyDistribution.value.map((item) => ({ name: item.name, value: item.value })) }],

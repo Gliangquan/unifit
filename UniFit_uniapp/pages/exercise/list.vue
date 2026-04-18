@@ -86,16 +86,8 @@
 import { request } from '@/common/request'
 import { ensureLogin } from '@/common/auth'
 
-const categoryOptions = [
-  { label: '全部类型', value: '' },
-  { label: '上肢', value: '上肢' },
-  { label: '下肢', value: '下肢' },
-  { label: '核心', value: '核心' },
-  { label: '有氧', value: '有氧' },
-  { label: '有氧操', value: '有氧操' },
-  { label: '恢复', value: '恢复' },
-  { label: '八段锦', value: '八段锦' },
-  { label: '瑜伽', value: '瑜伽' }
+const defaultCategoryOptions = [
+  { label: '全部类型', value: '' }
 ]
 
 const difficultyOptions = [
@@ -112,7 +104,7 @@ export default {
       rows: [],
       total: 0,
       loading: false,
-      categoryOptions,
+      categoryOptions: defaultCategoryOptions,
       difficultyOptions,
       query: {
         current: 1,
@@ -135,9 +127,24 @@ export default {
   },
   async onShow() {
     if (!ensureLogin()) return
+    await this.loadCategoryOptions()
     await this.reload()
   },
   methods: {
+    async loadCategoryOptions() {
+      const rows = await request({ url: '/exercise/categories', showError: false }).catch(() => []) || []
+      this.categoryOptions = [{ label: '全部类型', value: '' }].concat(
+        rows
+          .filter(item => item && item.value)
+          .map(item => ({
+            label: item.label || item.value,
+            value: item.value
+          }))
+      )
+      if (this.query.category && !this.categoryOptions.find(item => item.value === this.query.category)) {
+        this.query.category = ''
+      }
+    },
     buildListUrl() {
       const params = [
         `current=${this.query.current}`,
