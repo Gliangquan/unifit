@@ -238,7 +238,7 @@ const equipmentLabelMap: Record<string, string> = {
   rope: '跳绳',
 };
 
-const typeOptions = [
+const rawTypeOptions = [
   { label: '有氧操', value: '有氧操' },
   { label: '跳绳', value: '跳绳' },
   { label: '八段锦', value: '八段锦' },
@@ -259,7 +259,7 @@ const typeOptions = [
   { label: '恢复', value: 'recovery' },
 ];
 
-const levelOptions = [
+const rawLevelOptions = [
   { label: '零基础', value: 'newbie' },
   { label: '初级', value: 'beginner' },
   { label: '进阶', value: 'intermediate' },
@@ -269,6 +269,18 @@ const levelOptions = [
   { label: '进阶', value: '进阶' },
   { label: '强化', value: '强化' },
 ];
+
+const dedupeOptionsByLabel = (options: Array<{ label: string; value: string }>) => {
+  const seen = new Set<string>();
+  return options.filter((item) => {
+    if (seen.has(item.label)) return false;
+    seen.add(item.label);
+    return true;
+  });
+};
+
+const typeOptions = dedupeOptionsByLabel(rawTypeOptions);
+const levelOptions = dedupeOptionsByLabel(rawLevelOptions);
 
 const equipmentOptions = [
   '无器械',
