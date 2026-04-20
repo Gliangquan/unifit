@@ -1,0 +1,64 @@
+services:
+  unifit-backend:
+    build:
+      context: ./UniFit-backend
+    container_name: unifit-backend
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      TZ: Asia/Shanghai
+      SERVER_PORT: 19921
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/unifit?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: DjmIpJ2PdXs4H3Ju1JYIrfvZ
+      REDIS_HOST: host.docker.internal
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      RABBITMQ_HOST: host.docker.internal
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      MINIO_ENDPOINT: http://host.docker.internal:9000
+      MINIO_PUBLIC_ENDPOINT: http://127.0.0.1:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: unifit
+      JWT_SECRET: unifit-jwt-secret-please-change-in-production-2026-very-long
+    ports:
+      - "19921:19921"
+    networks:
+      - shared-infra
+      - unifit-net
+
+  unifit-frontend:
+    build:
+      context: ./UniFit-frontend
+    container_name: unifit-frontend
+    restart: unless-stopped
+    depends_on:
+      - unifit-backend
+    ports:
+      - "19922:80"
+    networks:
+      - unifit-net
+
+  unifit-uniapp-h5:
+    build:
+      context: ./UniFit_uniapp
+      dockerfile: Dockerfile.h5
+    container_name: unifit-uniapp-h5
+    restart: unless-stopped
+    depends_on:
+      - unifit-backend
+    ports:
+      - "19923:8080"
+    networks:
+      - unifit-net
+
+networks:
+  shared-infra:
+    external: true
+    name: shared-infra
+  unifit-net:
+    driver: bridge
