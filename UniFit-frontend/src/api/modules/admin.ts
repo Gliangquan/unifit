@@ -67,10 +67,11 @@ export function getUserDetail(userId: number): Promise<BaseResponse<User>> {
   return request.get(`/admin/user/${userId}`);
 }
 
-export function updateUser(userId: number, userName?: string, userPhone?: string, userRole?: string): Promise<BaseResponse<boolean>> {
+export function updateUser(userId: number, userName?: string, userPhone?: string, userEmail?: string, userRole?: string): Promise<BaseResponse<boolean>> {
   const params: any = {};
   if (userName) params.userName = userName;
   if (userPhone) params.userPhone = userPhone;
+  if (userEmail) params.userEmail = userEmail;
   if (userRole) params.userRole = userRole;
   return request.put(`/admin/user/${userId}`, null, { params });
 }

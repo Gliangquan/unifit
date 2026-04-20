@@ -183,7 +183,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public boolean updateUser(Long userId, String userName, String userPhone, String userRole) {
+    public boolean updateUser(Long userId, String userName, String userPhone, String userEmail, String userRole) {
         User user = userMapper.selectById(userId);
         if (user == null) {
             return false;
@@ -193,6 +193,9 @@ public class AdminServiceImpl implements AdminService {
         }
         if (StringUtils.isNotBlank(userPhone)) {
             user.setUserPhone(userPhone);
+        }
+        if (StringUtils.isNotBlank(userEmail)) {
+            user.setUserEmail(userEmail);
         }
         if (StringUtils.isNotBlank(userRole)) {
             user.setUserRole(userRole);

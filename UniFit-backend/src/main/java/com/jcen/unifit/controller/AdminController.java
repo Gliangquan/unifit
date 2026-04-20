@@ -41,8 +41,9 @@ public class AdminController {
     public BaseResponse<Boolean> updateUser(@PathVariable Long userId,
                                             @RequestParam(required = false) String userName,
                                             @RequestParam(required = false) String userPhone,
+                                            @RequestParam(required = false) String userEmail,
                                             @RequestParam(required = false) String userRole) {
-        return ResultUtils.success(adminService.updateUser(userId, userName, userPhone, userRole));
+        return ResultUtils.success(adminService.updateUser(userId, userName, userPhone, userEmail, userRole));
     }
 
     @DeleteMapping("/user/{userId}")

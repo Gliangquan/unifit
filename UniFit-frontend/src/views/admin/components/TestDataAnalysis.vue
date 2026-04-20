@@ -62,6 +62,18 @@ const bindResize = (chart) => {
   resizeHandlers.push(handler);
 };
 
+const waitForVisible = async (id, retry = 12) => {
+  for (let i = 0; i < retry; i += 1) {
+    await nextTick();
+    const dom = document.getElementById(id);
+    if (dom && dom.clientWidth > 0 && dom.clientHeight > 0) {
+      return dom;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  return document.getElementById(id);
+};
+
 const initChart = (dom) => {
   if (!dom) return null;
   const instance = echarts.getInstanceByDom(dom);
@@ -69,10 +81,9 @@ const initChart = (dom) => {
 };
 
 const drawCharts = async () => {
-  await nextTick();
-  const itemDom = document.getElementById('testItemChart');
-  const gradeDom = document.getElementById('gradeChart');
-  if (!itemDom || !gradeDom) return;
+  const itemDom = await waitForVisible('testItemChart');
+  const gradeDom = await waitForVisible('gradeChart');
+  if (!itemDom || !gradeDom || !itemDom.clientWidth || !gradeDom.clientWidth) return;
 
   testItemChart?.dispose();
   gradeChart?.dispose();
@@ -106,14 +117,20 @@ const load = async () => {
     stats.passRate = data.passRate || '0.0%';
     tableData.value = data.testItemStats || [];
     gradeData.value = data.gradeDistribution || [];
-    await drawCharts();
   } finally {
     chartLoading.value = false;
     tableLoading.value = false;
   }
+  await nextTick();
+  await drawCharts();
 };
 
-onMounted(load);
+onMounted(async () => {
+  await nextTick();
+  await load();
+});
+
+
 onBeforeUnmount(() => {
   resizeHandlers.forEach((handler) => window.removeEventListener('resize', handler));
   testItemChart?.dispose();

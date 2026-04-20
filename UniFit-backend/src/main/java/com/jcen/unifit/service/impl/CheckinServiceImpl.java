@@ -57,6 +57,11 @@ public class CheckinServiceImpl implements CheckinService {
     @Override
     public Map<String, Object> checkin(User loginUser, CheckinRequest request) {
         ensureStudentVerified(loginUser);
+        
+        // 检查用户是否已解锁计划（planUnlocked = 1 表示已解锁）
+        if (loginUser.getPlanUnlocked() == null || loginUser.getPlanUnlocked() != 1) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "请先购买并解锁训练计划后再打卡");
+        }
         if (request != null && request.getDurationMinutes() != null && request.getDurationMinutes() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "打卡时长必须大于0");
         }

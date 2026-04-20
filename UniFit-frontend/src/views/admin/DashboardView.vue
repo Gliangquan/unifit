@@ -237,18 +237,37 @@ const bindResize = (chart) => {
   resizeHandlers.push(handler);
 };
 
+const waitForVisible = async (id, retry = 12) => {
+  for (let i = 0; i < retry; i += 1) {
+    await nextTick();
+    const dom = document.getElementById(id);
+    if (dom && dom.clientWidth > 0 && dom.clientHeight > 0) {
+      return dom;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  return document.getElementById(id);
+};
+
+const initChart = (dom) => {
+  if (!dom) return null;
+  const instance = echarts.getInstanceByDom(dom);
+  return instance || echarts.init(dom);
+};
+
 const drawCheckinTrendChart = async () => {
   const res = await getCheckinTrend();
   const data = toPayload(res) || [];
-  await nextTick();
-  const dom = document.getElementById('checkinTrendChart');
-  if (!dom) return;
+  const dom = await waitForVisible('checkinTrendChart');
+  if (!dom || !dom.clientWidth) return;
   checkinTrendChart?.dispose();
-  checkinTrendChart = echarts.init(dom);
+  checkinTrendChart = initChart(dom);
+  if (!checkinTrendChart) return;
   checkinTrendChart.setOption({
     tooltip: { trigger: 'axis' },
+    grid: { left: 40, right: 20, top: 30, bottom: 30 },
     xAxis: { type: 'category', data: data.map((item) => item.date) },
-    yAxis: { type: 'value' },
+    yAxis: { type: 'value', minInterval: 1 },
     series: [{ data: data.map((item) => item.count || 0), type: 'line', smooth: true, itemStyle: { color: '#1890ff' }, areaStyle: { color: 'rgba(24, 144, 255, 0.2)' } }],
   });
   bindResize(checkinTrendChart);
@@ -257,15 +276,16 @@ const drawCheckinTrendChart = async () => {
 const drawTestDistributionChart = async () => {
   const res = await getTestDistribution();
   const data = toPayload(res) || [];
-  await nextTick();
-  const dom = document.getElementById('testDistributionChart');
-  if (!dom) return;
+  const dom = await waitForVisible('testDistributionChart');
+  if (!dom || !dom.clientWidth) return;
   testDistributionChart?.dispose();
-  testDistributionChart = echarts.init(dom);
+  testDistributionChart = initChart(dom);
+  if (!testDistributionChart) return;
   testDistributionChart.setOption({
     tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: data.map((item) => item.itemCode) },
-    yAxis: { type: 'value' },
+    grid: { left: 40, right: 20, top: 30, bottom: 50 },
+    xAxis: { type: 'category', data: data.map((item) => item.itemCode), axisLabel: { interval: 0, rotate: data.length > 4 ? 20 : 0 } },
+    yAxis: { type: 'value', minInterval: 1 },
     series: [{ data: data.map((item) => item.count || 0), type: 'bar', itemStyle: { color: '#52c41a' } }],
   });
   bindResize(testDistributionChart);
@@ -292,10 +312,11 @@ onMounted(async () => {
     chartLoading.value = true;
     try {
       await Promise.all([loadDashboard(), loadActivity(), loadClassRanking()]);
-      await Promise.all([drawCheckinTrendChart(), drawTestDistributionChart()]);
     } finally {
       chartLoading.value = false;
     }
+    await nextTick();
+    await Promise.all([drawCheckinTrendChart(), drawTestDistributionChart()]);
     return;
   }
 

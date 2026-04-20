@@ -255,7 +255,7 @@ const submitEdit = async () => {
 
   editLoading.value = true;
   try {
-    await updateUser(currentUser.value.id, editForm.userName, editForm.userPhone);
+    await updateUser(currentUser.value.id, editForm.userName, editForm.userPhone, editForm.userEmail);
     message.success('学生信息更新成功');
     editVisible.value = false;
     await load();

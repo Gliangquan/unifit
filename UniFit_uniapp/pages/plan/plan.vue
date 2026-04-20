@@ -78,6 +78,14 @@
           </view>
           <view class="plan-info">
             <view class="info-row">
+              <text class="info-label">训练项目</text>
+              <text class="info-value">{{ currentPlan.testItemName }}</text>
+            </view>
+            <view class="info-row">
+              <text class="info-label">成绩等级</text>
+              <text class="info-value">{{ scoreLevelText(currentPlan.scoreLevel) }}</text>
+            </view>
+            <view class="info-row">
               <text class="info-label">目标成绩</text>
               <text class="info-value">{{ currentPlan.targetScore }}</text>
             </view>
@@ -86,16 +94,20 @@
               <text class="info-value">{{ currentPlan.currentScore }}</text>
             </view>
             <view class="info-row">
-              <text class="info-label">训练周期</text>
-              <text class="info-value">{{ currentPlan.daysPerWeek }}天/周</text>
+              <text class="info-label">BMI范围</text>
+              <text class="info-value">{{ currentPlan.bmiRangeLabel || bmiRangeTextFromPlan(currentPlan) }}</text>
             </view>
             <view class="info-row">
-              <text class="info-label">体能基础</text>
+              <text class="info-label">训练基础</text>
               <text class="info-value">{{ currentPlan.fitnessLevelLabel }}</text>
             </view>
             <view class="info-row">
-              <text class="info-label">器械条件</text>
+              <text class="info-label">器械类型</text>
               <text class="info-value">{{ currentPlan.equipmentTypeLabel }}</text>
+            </view>
+            <view class="info-row">
+              <text class="info-label">每周天数</text>
+              <text class="info-value">每周 {{ currentPlan.daysPerWeek }} 天</text>
             </view>
           </view>
           <view class="plan-actions single-action">
@@ -161,12 +173,34 @@
             </view>
           </view>
 
+          <view class="form-row">
+            <view class="form-item form-item-half">
+              <view class="form-label">
+                <uni-icons type="star" size="18" color="#64748b"></uni-icons>
+                <text>成绩等级</text>
+              </view>
+              <view class="form-input readonly-field">{{ scoreLevelText(form.scoreLevel) }}</view>
+            </view>
+
+            <view class="form-item form-item-half">
+              <view class="form-label">
+                <uni-icons type="paperplane" size="18" color="#64748b"></uni-icons>
+                <text>BMI范围</text>
+              </view>
+              <view class="form-input readonly-field">{{ bmiRangeText }}</view>
+            </view>
+          </view>
+
           <view class="form-item">
             <view class="form-label">
               <uni-icons type="calendar" size="18" color="#64748b"></uni-icons>
               <text>每周训练天数</text>
             </view>
             <input class="form-input" v-model="form.daysPerWeek" type="number" placeholder="请输入天数（1-7）" />
+          </view>
+
+          <view class="match-tip">
+            将按「项目 + 等级 + 训练基础 + 器械类型 + BMI范围 + 每周天数」匹配训练模板
           </view>
 
           <view class="plan-popup-actions">
@@ -216,6 +250,7 @@ export default {
       form: {
         testItemCode: '',
         currentScore: '',
+        scoreLevel: '',
         fitnessLevel: 'newbie',
         fitnessLevelLabel: '入门',
         equipmentType: 'bodyweight',
@@ -252,6 +287,14 @@ export default {
     currentScorePlaceholder() {
       if (!this.currentTestItemUnit) return '请输入当前成绩'
       return `请输入当前成绩（${this.currentTestItemUnit}）`
+    },
+    bmiRangeText() {
+      const bmi = Number(this.form.bmiValue)
+      if (!Number.isFinite(bmi) || bmi <= 0) return '未获取'
+      if (bmi < 18.5) return '偏瘦'
+      if (bmi < 24) return '正常'
+      if (bmi < 28) return '超重'
+      return '肥胖'
     }
   },
   async onShow() {
@@ -318,6 +361,7 @@ export default {
         this.form.testItemCode = row.itemCode
         this.selectedTestItem = row.itemName
         this.form.currentScore = ''
+        this.form.scoreLevel = ''
       }
     },
     onFitnessChange(e) {
@@ -387,6 +431,7 @@ export default {
         uni.showToast({ title: '请输入有效成绩', icon: 'none' })
         return null
       }
+      const scoreLevel = this.resolveScoreLevel(currentScore)
       const daysPerWeek = Number(this.form.daysPerWeek)
       if (!Number.isInteger(daysPerWeek) || daysPerWeek < 1 || daysPerWeek > 7) {
         uni.showToast({ title: '训练天数需在1-7之间', icon: 'none' })
@@ -397,9 +442,11 @@ export default {
         const parsed = Number(this.form.bmiValue)
         bmiValue = Number.isFinite(parsed) ? parsed : null
       }
+      this.form.scoreLevel = scoreLevel
       return {
         testItemCode: this.form.testItemCode,
         currentScore,
+        scoreLevel,
         fitnessLevel: this.form.fitnessLevel,
         equipmentType: this.form.equipmentType,
         daysPerWeek,
@@ -521,7 +568,8 @@ export default {
         targetScore: this.targetScoreText(safePlan.scoreLevel),
         currentScore: this.currentScoreText(safePlan),
         fitnessLevelLabel: this.fitnessLevelText(safePlan.fitnessLevel),
-        equipmentTypeLabel: this.equipmentTypeText(safePlan.equipmentType)
+        equipmentTypeLabel: this.equipmentTypeText(safePlan.equipmentType),
+        bmiRangeLabel: this.bmiRangeTextFromPlan(safePlan)
       }
     },
     cacheCurrentPlan(plan) {
@@ -582,6 +630,31 @@ export default {
       const row = this.testItemOptions.find(item => item.itemCode === code)
       return row ? row.itemName : (this.selectedTestItem || code)
     },
+    resolveScoreLevel(currentScore) {
+      if (!this.form.testItemCode || !Number.isFinite(currentScore)) return ''
+      const item = this.testItemOptions.find(row => row.itemCode === this.form.testItemCode)
+      if (!item || !Array.isArray(item.standards) || !item.standards.length) return ''
+      const standards = [...item.standards].sort((a, b) => Number(a.thresholdScore || 0) - Number(b.thresholdScore || 0))
+      const isLowerBetter = item.direction === 'lower'
+      if (isLowerBetter) {
+        if (currentScore <= Number(standards[0].thresholdScore || 0)) return 'advanced'
+        if (standards[1] && currentScore <= Number(standards[1].thresholdScore || 0)) return 'intermediate'
+        return 'beginner'
+      }
+      const advancedLine = standards[standards.length - 1]
+      const intermediateLine = standards.length >= 2 ? standards[standards.length - 2] : null
+      if (currentScore >= Number(advancedLine.thresholdScore || 0)) return 'advanced'
+      if (intermediateLine && currentScore >= Number(intermediateLine.thresholdScore || 0)) return 'intermediate'
+      return 'beginner'
+    },
+    scoreLevelText(value) {
+      const map = {
+        beginner: '初级',
+        intermediate: '中级',
+        advanced: '高级'
+      }
+      return map[value] || '待计算'
+    },
     fitnessLevelText(value) {
       const map = {
         newbie: '入门',
@@ -620,6 +693,19 @@ export default {
         return unit ? `-- ${unit}` : '--'
       }
       return unit ? `${score} ${unit}` : String(score)
+    },
+    bmiRangeTextFromValue(value) {
+      const bmi = Number(value)
+      if (!Number.isFinite(bmi) || bmi <= 0) return '未获取'
+      if (bmi < 18.5) return '偏瘦'
+      if (bmi < 24) return '正常'
+      if (bmi < 28) return '超重'
+      return '肥胖'
+    },
+    bmiRangeTextFromPlan(plan) {
+      if (!plan) return '未获取'
+      const snapshot = plan.snapshot || {}
+      return this.bmiRangeTextFromValue(snapshot.bmiValue)
     }
   }
 }
@@ -765,6 +851,13 @@ export default {
   font-size: 26rpx;
   color: $text-primary;
   box-sizing: border-box;
+}
+
+.readonly-field {
+  display: flex;
+  align-items: center;
+  color: $text-secondary;
+  background: #f8fafc;
 }
 
 .picker-value {
@@ -1072,6 +1165,17 @@ export default {
   line-height: 48rpx;
   font-size: 32rpx;
   color: $text-secondary;
+}
+
+.match-tip {
+  margin-top: 18rpx;
+  padding: 16rpx;
+  border-radius: $radius-md;
+  background: #f8fafc;
+  border: 1rpx dashed #d7dee8;
+  color: $text-secondary;
+  font-size: 23rpx;
+  line-height: 1.7;
 }
 
 .plan-popup-actions {

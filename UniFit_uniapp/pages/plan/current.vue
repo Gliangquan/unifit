@@ -108,12 +108,14 @@
               <view class="course-meta">{{ item.setsCount || 0 }}组 · {{ item.repsCount || 0 }}次 · {{ item.durationMinutes || 0 }}分钟</view>
             </view>
             <button
+              v-if="canConfirmDone(item)"
               class="uf-btn-secondary mini-btn"
               :disabled="Number(item.completed) === 1"
               @click="markItemDone(item)"
             >
               {{ Number(item.completed) === 1 ? '已完成' : '确认完成' }}
             </button>
+            <text v-else class="uf-hint">{{ confirmDoneHint(item) }}</text>
           </view>
         </view>
         <view v-else class="empty">今天不是训练日，或当前计划暂无待训练动作。你也可以在下方课程列表中手动确认完成。</view>
@@ -142,13 +144,14 @@
                   {{ isCourseLocked(item.courseIndex) ? '付费解锁' : '查看动作' }}
                 </button>
                 <button
-                  v-if="item.id"
+                  v-if="canConfirmDone(item) && item.id"
                   class="uf-btn-primary mini-btn"
                   :disabled="Number(item.completed) === 1"
                   @click="markItemDone(item)"
                 >
                   {{ Number(item.completed) === 1 ? '已完成' : '确认完成' }}
                 </button>
+                <text v-else-if="item.id" class="uf-hint">{{ confirmDoneHint(item) }}</text>
               </view>
             </view>
           </view>
@@ -167,6 +170,7 @@ export default {
   data() {
     return {
       user: {},
+      planUnlocked: false,
       studentProfile: {},
       needStudentVerify: false,
       verifyStatusText: '未提交',
@@ -260,6 +264,7 @@ export default {
       const latestUser = await request({ url: '/user/get/login', showError: false }) || {}
       const localUser = uni.getStorageSync('user') || {}
       this.user = { ...localUser, ...latestUser, token: localUser.token }
+      this.planUnlocked = (latestUser && Number(latestUser.planUnlocked) === 1) || (localUser && Number(localUser.planUnlocked) === 1)
       setUser(this.user)
     },
     async loadStudentVerifyStatus() {
@@ -499,8 +504,30 @@ export default {
       if (status === 'archived') return 'status-archived'
       return 'status-active'
     },
+    canConfirmDone(item) {
+      return !!(item && item.id && this.planUnlocked && !this.isCourseLocked(item.courseIndex) && !this.hasTodayCompletedOtherItem(item))
+    },
+    hasTodayCompletedOtherItem(item) {
+      const rows = this.plan.items || []
+      return rows.some(row => Number(row.completed) === 1 && row.id !== item.id && this.isToday(row.completeTime))
+    },
+    isToday(value) {
+      if (!value) return false
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) return false
+      const now = new Date()
+      return date.getFullYear() === now.getFullYear()
+        && date.getMonth() === now.getMonth()
+        && date.getDate() === now.getDate()
+    },
+    confirmDoneHint(item) {
+      if (!this.planUnlocked) return '需解锁计划'
+      if (this.isCourseLocked(item.courseIndex)) return '未解锁不可完成'
+      if (this.hasTodayCompletedOtherItem(item)) return '今日已完成一次'
+      return ''
+    },
     async markItemDone(item) {
-      if (!item || !item.id || Number(item.completed) === 1) {
+      if (!this.canConfirmDone(item) || Number(item.completed) === 1) {
         return
       }
       await request({
@@ -676,5 +703,10 @@ export default {
   color: $text-secondary;
   font-size: 24rpx;
   padding: 12rpx 0;
+}
+
+.uf-hint {
+  font-size: 22rpx;
+  color: #9ca3af;
 }
 </style>

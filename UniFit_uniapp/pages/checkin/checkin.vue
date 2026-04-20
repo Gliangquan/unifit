@@ -21,9 +21,11 @@
         :selected="calendarCheckins"
         :showMonth="false"
       />
-      <view class="checkin-tip">橙点表示已打卡，点击下方按钮完成今日训练打卡。</view>
-      <input class="uf-input" v-model="duration" type="number" placeholder="本次运动时长(分钟)" />
-      <button class="uf-btn-primary" @click="doCheckin">完成打卡</button>
+      <view class="checkin-tip">橙点表示已打卡，请输入本次实际运动时长后完成今日训练打卡。</view>
+      <input v-if="planUnlocked && !todayCheckedIn" class="uf-input" v-model="duration" type="number" placeholder="请输入本次运动时长(分钟)" />
+      <button v-if="planUnlocked && !todayCheckedIn" class="uf-btn-primary" @click="doCheckin">完成打卡</button>
+      <view v-else-if="planUnlocked" class="locked-tip">今天已打卡，无需重复提交</view>
+      <view v-else class="locked-tip">请先解锁训练计划后打卡</view>
     </view>
 
     <view class="uf-card uf-fade-up" style="margin-top: 20rpx;">
@@ -79,6 +81,7 @@ export default {
   data() {
     return {
       user: {},
+      planUnlocked: false,
       duration: '60',
       streak: 0,
       ranking: [],
@@ -92,6 +95,14 @@ export default {
   computed: {
     isAdminRole() {
       return (this.user.userRole || 'student') === 'admin'
+    },
+    todayCheckedIn() {
+      const today = new Date()
+      const y = today.getFullYear()
+      const m = `${today.getMonth() + 1}`.padStart(2, '0')
+      const d = `${today.getDate()}`.padStart(2, '0')
+      const todayText = `${y}-${m}-${d}`
+      return (this.calendarCheckins || []).some(item => item && item.date === todayText)
     }
   },
   async onShow() {
@@ -108,6 +119,7 @@ export default {
         ...latestUser,
         token: localUser.token
       }
+      this.planUnlocked = Number(latestUser.planUnlocked) === 1
       setUser(this.user)
     },
     async refresh() {
@@ -141,12 +153,21 @@ export default {
         uni.showToast({ title: '请先生成训练计划', icon: 'none' })
         return
       }
+      if (this.todayCheckedIn) {
+        uni.showToast({ title: '今天已打卡', icon: 'none' })
+        return
+      }
+      const duration = Number(String(this.duration || '').trim())
+      if (!Number.isFinite(duration) || duration <= 0) {
+        uni.showToast({ title: '请输入正确的运动时长', icon: 'none' })
+        return
+      }
       const result = await request({
         url: '/checkin/do',
         method: 'POST',
         data: {
           userPlanId: this.currentPlan.planId,
-          durationMinutes: Number(this.duration || 60)
+          durationMinutes: duration
         }
       })
       uni.showToast({ title: result && result.alreadyCheckedIn ? '今天已打过卡' : '打卡成功', icon: 'success' })
@@ -226,6 +247,13 @@ export default {
   font-size: 22rpx;
   color: $text-secondary;
   line-height: 1.6;
+}
+
+.locked-tip {
+  margin: 12rpx 0 16rpx;
+  font-size: 24rpx;
+  color: #9ca3af;
+  text-align: center;
 }
 
 .rank-row {

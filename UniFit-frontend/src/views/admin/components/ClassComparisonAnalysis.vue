@@ -93,6 +93,18 @@ const bindResize = (chart) => {
   resizeHandlers.push(handler);
 };
 
+const waitForVisible = async (id, retry = 12) => {
+  for (let i = 0; i < retry; i += 1) {
+    await nextTick();
+    const dom = document.getElementById(id);
+    if (dom && dom.clientWidth > 0 && dom.clientHeight > 0) {
+      return dom;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  return document.getElementById(id);
+};
+
 const initChart = (dom) => {
   if (!dom) return null;
   const instance = echarts.getInstanceByDom(dom);
@@ -100,9 +112,8 @@ const initChart = (dom) => {
 };
 
 const drawChart = async () => {
-  await nextTick();
-  const dom = document.getElementById('classComparisonChart');
-  if (!dom) return;
+  const dom = await waitForVisible('classComparisonChart');
+  if (!dom || !dom.clientWidth) return;
   chartInstance?.dispose();
   chartInstance = initChart(dom);
   chartInstance.setOption({
@@ -123,14 +134,19 @@ const load = async () => {
     if (!selectedClasses.value.length) {
       selectedClasses.value = detailData.value.slice(0, 3).map((item) => item.classId);
     }
-    await drawChart();
   } finally {
     chartLoading.value = false;
     tableLoading.value = false;
   }
+  await nextTick();
+  await drawChart();
 };
 
-onMounted(load);
+onMounted(async () => {
+  await nextTick();
+  await load();
+});
+
 onBeforeUnmount(() => {
   resizeHandlers.forEach((handler) => window.removeEventListener('resize', handler));
   chartInstance?.dispose();

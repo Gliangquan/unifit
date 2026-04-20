@@ -54,6 +54,18 @@ const bindResize = (chart) => {
   resizeHandlers.push(handler);
 };
 
+const waitForVisible = async (id, retry = 12) => {
+  for (let i = 0; i < retry; i += 1) {
+    await nextTick();
+    const dom = document.getElementById(id);
+    if (dom && dom.clientWidth > 0 && dom.clientHeight > 0) {
+      return dom;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  return document.getElementById(id);
+};
+
 const initChart = (dom) => {
   if (!dom) return null;
   const instance = echarts.getInstanceByDom(dom);
@@ -61,10 +73,9 @@ const initChart = (dom) => {
 };
 
 const drawCharts = async () => {
-  await nextTick();
-  const trendDom = document.getElementById('checkinTrendChartAnalysis');
-  const timeDom = document.getElementById('timeDistributionChartAnalysis');
-  if (!trendDom || !timeDom) return;
+  const trendDom = await waitForVisible('checkinTrendChartAnalysis');
+  const timeDom = await waitForVisible('timeDistributionChartAnalysis');
+  if (!trendDom || !timeDom || !trendDom.clientWidth || !timeDom.clientWidth) return;
 
   trendChart?.dispose();
   timeChart?.dispose();
@@ -101,14 +112,20 @@ const load = async () => {
     tableData.value = data.details || [];
     trendData.value = [...tableData.value].reverse();
     timeDistribution.value = data.timeDistribution || [];
-    await drawCharts();
   } finally {
     chartLoading.value = false;
     tableLoading.value = false;
   }
+  await nextTick();
+  await drawCharts();
 };
 
-onMounted(load);
+onMounted(async () => {
+  await nextTick();
+  await load();
+});
+
+
 onBeforeUnmount(() => {
   resizeHandlers.forEach((handler) => window.removeEventListener('resize', handler));
   trendChart?.dispose();

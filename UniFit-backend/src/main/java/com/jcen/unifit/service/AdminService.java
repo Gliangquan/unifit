@@ -31,7 +31,7 @@ public interface AdminService {
     /**
      * 编辑用户信息
      */
-    boolean updateUser(Long userId, String userName, String userPhone, String userRole);
+    boolean updateUser(Long userId, String userName, String userPhone, String userEmail, String userRole);
 
     /**
      * 删除用户
