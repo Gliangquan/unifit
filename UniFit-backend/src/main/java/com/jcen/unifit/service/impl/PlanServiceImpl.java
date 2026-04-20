@@ -195,7 +195,7 @@ public class PlanServiceImpl implements PlanService {
         if (plan == null || !plan.getUserId().equals(loginUser.getId())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限操作");
         }
-        int courseIndex = userPlanItemMapper.selectCount(new QueryWrapper<UserPlanItem>()
+        long courseIndex = userPlanItemMapper.selectCount(new QueryWrapper<UserPlanItem>()
                 .eq("user_plan_id", item.getUserPlanId())
                 .lt("id", item.getId()));
         if (courseIndex >= 2) {

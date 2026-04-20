@@ -39,10 +39,33 @@ public class PlanTemplateAdminServiceImpl implements PlanTemplateAdminService {
     private ExerciseMapper exerciseMapper;
 
     @Override
-    public Page<PlanTemplate> listTemplates(long current, long pageSize, String keyword) {
+    public Page<PlanTemplate> listTemplates(long current, long pageSize, String keyword,
+                                            String testItemCode, String scoreLevel, String fitnessLevel,
+                                            String equipmentType, String bmiRange, Integer daysPerWeek, Integer status) {
         QueryWrapper<PlanTemplate> qw = new QueryWrapper<>();
         if (StringUtils.isNotBlank(keyword)) {
             qw.and(x -> x.like("template_code", keyword).or().like("template_name", keyword));
+        }
+        if (StringUtils.isNotBlank(testItemCode)) {
+            qw.eq("test_item_code", testItemCode);
+        }
+        if (StringUtils.isNotBlank(scoreLevel)) {
+            qw.eq("score_level", scoreLevel);
+        }
+        if (StringUtils.isNotBlank(fitnessLevel)) {
+            qw.eq("fitness_level", fitnessLevel);
+        }
+        if (StringUtils.isNotBlank(equipmentType)) {
+            qw.eq("equipment_type", equipmentType);
+        }
+        if (StringUtils.isNotBlank(bmiRange)) {
+            qw.eq("bmi_range", bmiRange);
+        }
+        if (daysPerWeek != null) {
+            qw.eq("days_per_week", daysPerWeek);
+        }
+        if (status != null) {
+            qw.eq("status", status);
         }
         qw.orderByDesc("id");
         return planTemplateMapper.selectPage(new Page<>(current, pageSize), qw);

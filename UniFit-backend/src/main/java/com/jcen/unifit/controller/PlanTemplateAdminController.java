@@ -29,8 +29,16 @@ public class PlanTemplateAdminController {
     @AuthCheck(mustRoles = {UserConstant.ADMIN_ROLE, UserConstant.TEACHER_ROLE})
     public BaseResponse<Page<PlanTemplate>> list(@RequestParam(defaultValue = "1") long current,
                                                  @RequestParam(defaultValue = "10") long pageSize,
-                                                 @RequestParam(required = false) String keyword) {
-        return ResultUtils.success(planTemplateAdminService.listTemplates(current, pageSize, keyword));
+                                                 @RequestParam(required = false) String keyword,
+                                                 @RequestParam(required = false) String testItemCode,
+                                                 @RequestParam(required = false) String scoreLevel,
+                                                 @RequestParam(required = false) String fitnessLevel,
+                                                 @RequestParam(required = false) String equipmentType,
+                                                 @RequestParam(required = false) String bmiRange,
+                                                 @RequestParam(required = false) Integer daysPerWeek,
+                                                 @RequestParam(required = false) Integer status) {
+        return ResultUtils.success(planTemplateAdminService.listTemplates(current, pageSize, keyword,
+                testItemCode, scoreLevel, fitnessLevel, equipmentType, bmiRange, daysPerWeek, status));
     }
 
     @PostMapping("/upsert")

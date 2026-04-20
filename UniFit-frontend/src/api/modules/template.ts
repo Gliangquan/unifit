@@ -41,7 +41,18 @@ export interface ExerciseLite {
   difficulty?: string;
 }
 
-export function listTemplates(params: { current?: number; pageSize?: number; keyword?: string }): Promise<BaseResponse<PageData<PlanTemplate>>> {
+export function listTemplates(params: {
+  current?: number;
+  pageSize?: number;
+  keyword?: string;
+  testItemCode?: string;
+  scoreLevel?: string;
+  fitnessLevel?: string;
+  equipmentType?: string;
+  bmiRange?: string;
+  daysPerWeek?: number;
+  status?: number;
+}): Promise<BaseResponse<PageData<PlanTemplate>>> {
   return request.get('/admin/template/list', { params });
 }
 

@@ -1,9 +1,31 @@
 <template>
   <a-card title="计划模板管理">
-    <a-space style="margin-bottom: 12px;">
-      <a-input v-model:value="query.keyword" placeholder="模板编码/名称" style="width: 220px" @pressEnter="loadTemplates" />
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+      <a-input v-model:value="query.keyword" placeholder="模板编码/名称" style="width: 220px" @pressEnter="onSearch" />
+      <a-select v-model:value="query.testItemCode" placeholder="体测项目" allow-clear style="width: 160px" @change="onSearch">
+        <a-select-option v-for="item in testItems" :key="item.itemCode" :value="item.itemCode">{{ item.itemName }}</a-select-option>
+      </a-select>
+      <a-select v-model:value="query.scoreLevel" placeholder="成绩等级" allow-clear style="width: 140px" @change="onSearch">
+        <a-select-option value="beginner">初级</a-select-option>
+        <a-select-option value="intermediate">中级</a-select-option>
+        <a-select-option value="advanced">高级</a-select-option>
+      </a-select>
+      <a-select v-model:value="query.fitnessLevel" placeholder="训练基础" allow-clear style="width: 140px" @change="onSearch">
+        <a-select-option value="newbie">新手</a-select-option>
+        <a-select-option value="basic">有基础</a-select-option>
+        <a-select-option value="advanced">经常训练</a-select-option>
+      </a-select>
+      <a-select v-model:value="query.equipmentType" placeholder="器械类型" allow-clear style="width: 140px" :options="equipmentTypeOptions" @change="onSearch" />
+      <a-select v-model:value="query.bmiRange" placeholder="BMI范围" allow-clear style="width: 140px" :options="bmiRangeOptions" @change="onSearch" />
+      <a-input-number v-model:value="query.daysPerWeek" placeholder="每周天数" :min="1" :max="7" style="width: 120px" @change="onSearch" />
+      <a-select v-model:value="query.status" placeholder="状态" allow-clear style="width: 120px" @change="onSearch">
+        <a-select-option :value="1">启用</a-select-option>
+        <a-select-option :value="0">禁用</a-select-option>
+      </a-select>
+      <a-button type="primary" @click="onSearch">搜索</a-button>
+      <a-button @click="resetSearch">重置</a-button>
       <a-button type="primary" @click="openTemplateModal()">新增模板</a-button>
-    </a-space>
+    </div>
 
     <a-table :columns="templateColumns" :data-source="templates" :loading="loading" :pagination="pagination" row-key="id" @change="onPageChange">
       <template #bodyCell="{ column, record }">
@@ -128,7 +150,18 @@ import {
 const loading = ref(false);
 const templates = ref<PlanTemplate[]>([]);
 const pagination = reactive({ current: 1, pageSize: 10, total: 0 });
-const query = reactive({ current: 1, pageSize: 10, keyword: '' });
+const query = reactive({
+  current: 1,
+  pageSize: 10,
+  keyword: '',
+  testItemCode: undefined as string | undefined,
+  scoreLevel: undefined as string | undefined,
+  fitnessLevel: undefined as string | undefined,
+  equipmentType: undefined as string | undefined,
+  bmiRange: undefined as string | undefined,
+  daysPerWeek: undefined as number | undefined,
+  status: undefined as number | undefined,
+});
 
 const templateModalOpen = ref(false);
 const templateForm = reactive<any>({
@@ -309,6 +342,25 @@ const exerciseLabel = (exerciseId?: number) => {
 const onPageChange = (p: any) => {
   query.current = p.current;
   query.pageSize = p.pageSize;
+  loadTemplates();
+};
+
+const onSearch = () => {
+  query.current = 1;
+  loadTemplates();
+};
+
+const resetSearch = () => {
+  query.current = 1;
+  query.pageSize = 10;
+  query.keyword = '';
+  query.testItemCode = undefined;
+  query.scoreLevel = undefined;
+  query.fitnessLevel = undefined;
+  query.equipmentType = undefined;
+  query.bmiRange = undefined;
+  query.daysPerWeek = undefined;
+  query.status = undefined;
   loadTemplates();
 };
 

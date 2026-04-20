@@ -12,7 +12,9 @@ import java.util.List;
 
 public interface PlanTemplateAdminService {
 
-    Page<PlanTemplate> listTemplates(long current, long pageSize, String keyword);
+    Page<PlanTemplate> listTemplates(long current, long pageSize, String keyword,
+                                     String testItemCode, String scoreLevel, String fitnessLevel,
+                                     String equipmentType, String bmiRange, Integer daysPerWeek, Integer status);
 
     PlanTemplate upsertTemplate(PlanTemplateUpsertRequest request);
 
