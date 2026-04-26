@@ -16,14 +16,6 @@
           <view class="balance-label">当前余额</view>
           <view class="balance-amount">¥{{ balanceText }}</view>
         </view>
-        <view class="balance-status">
-          <view class="status-item">
-            <text class="status-label">计划权限</text>
-            <text class="status-value" :class="planUnlocked ? 'status-success' : 'status-warning'">
-              {{ planUnlocked ? '已解锁' : '未解锁' }}
-            </text>
-          </view>
-        </view>
       </view>
     </view>
 
@@ -129,7 +121,6 @@ export default {
   data() {
     return {
       balance: 0,
-      planUnlocked: 0,
       selectedAmount: null,
       customAmount: '',
       selectedPaymentMethod: 'wechat',
@@ -192,7 +183,6 @@ export default {
       const user = { ...localUser, ...(latest || {}), token: localUser.token }
       uni.setStorageSync('user', user)
       this.balance = Number(user.balance || 0)
-      this.planUnlocked = Number(user.planUnlocked || 0)
       this.transactions = uni.getStorageSync(this.getTransactionKey()) || []
     },
     syncUserStore(latestUser) {
@@ -200,7 +190,6 @@ export default {
       const merged = { ...localUser, ...(latestUser || {}), token: localUser.token }
       uni.setStorageSync('user', merged)
       this.balance = Number(merged.balance || 0)
-      this.planUnlocked = Number(merged.planUnlocked || 0)
       return merged
     },
     selectAmount(amount) {
@@ -321,31 +310,6 @@ export default {
   color: $primary-color;
 }
 
-.balance-status {
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-
-.status-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.status-label {
-  font-size: 20rpx;
-  color: $text-secondary;
-  margin-bottom: 4rpx;
-}
-
-.status-value {
-  font-size: 24rpx;
-  font-weight: 600;
-}
-
-.status-success { color: #16a34a; }
-.status-warning { color: #ca8a04; }
 
 .section-container {
   margin: 16rpx 16rpx;

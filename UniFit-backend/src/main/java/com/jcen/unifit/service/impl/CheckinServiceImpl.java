@@ -95,15 +95,17 @@ public class CheckinServiceImpl implements CheckinService {
         }
         long completedCount = userPlanItemMapper.selectCount(new QueryWrapper<UserPlanItem>()
                 .eq("user_plan_id", userPlanId)
-                .eq("completed", 1));
+                .eq("completed", 1)
+                .ge("complete_time", start)
+                .lt("complete_time", end));
         if (completedCount <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请先完成至少一个训练动作后再打卡");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请先完成今日训练后再打卡");
         }
 
         Checkin checkin = new Checkin();
         checkin.setUserId(loginUser.getId());
         checkin.setUserPlanId(userPlanId);
-        checkin.setDurationMinutes(request == null || request.getDurationMinutes() == null ? 60 : request.getDurationMinutes());
+        checkin.setDurationMinutes(request.getDurationMinutes());
         checkin.setNote(request == null ? null : request.getNote());
         checkin.setCheckinDate(new Date());
         checkin.setCreateTime(new Date());

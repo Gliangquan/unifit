@@ -18,7 +18,7 @@ function shouldForceLogoutByBizError(code?: number, messageText?: string): boole
 
 // 创建 axios 实例
 const request: AxiosInstance = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',

@@ -147,7 +147,7 @@
               <uni-icons type="medal" size="18" color="#64748b"></uni-icons>
               <text>当前成绩</text>
             </view>
-            <input class="form-input" v-model="form.currentScore" type="digit" :placeholder="currentScorePlaceholder" />
+            <input class="form-input" v-model="form.currentScore" type="digit" :placeholder="currentScorePlaceholder" @input="syncScoreLevel" />
             <view class="field-hint" v-if="currentTestItemUnit">单位：{{ currentTestItemUnit }}</view>
           </view>
 
@@ -370,6 +370,10 @@ export default {
         this.form.fitnessLevel = row.value
         this.form.fitnessLevelLabel = row.label
       }
+    },
+    syncScoreLevel() {
+      const currentScore = Number(String(this.form.currentScore ?? '').trim())
+      this.form.scoreLevel = Number.isFinite(currentScore) ? this.resolveScoreLevel(currentScore) : ''
     },
     onEquipmentChange(e) {
       const row = this.equipmentTypeOptions[Number(e.detail.value)]
@@ -633,18 +637,28 @@ export default {
     resolveScoreLevel(currentScore) {
       if (!this.form.testItemCode || !Number.isFinite(currentScore)) return ''
       const item = this.testItemOptions.find(row => row.itemCode === this.form.testItemCode)
-      if (!item || !Array.isArray(item.standards) || !item.standards.length) return ''
-      const standards = [...item.standards].sort((a, b) => Number(a.thresholdScore || 0) - Number(b.thresholdScore || 0))
-      const isLowerBetter = item.direction === 'lower'
-      if (isLowerBetter) {
-        if (currentScore <= Number(standards[0].thresholdScore || 0)) return 'advanced'
-        if (standards[1] && currentScore <= Number(standards[1].thresholdScore || 0)) return 'intermediate'
+      if (item && Array.isArray(item.standards) && item.standards.length) {
+        const standards = [...item.standards].sort((a, b) => Number(a.thresholdScore || 0) - Number(b.thresholdScore || 0))
+        const isLowerBetter = item.direction === 'lower'
+        if (isLowerBetter) {
+          if (currentScore <= Number(standards[0].thresholdScore || 0)) return 'advanced'
+          if (standards[1] && currentScore <= Number(standards[1].thresholdScore || 0)) return 'intermediate'
+          return 'beginner'
+        }
+        const advancedLine = standards[standards.length - 1]
+        const intermediateLine = standards.length >= 2 ? standards[standards.length - 2] : null
+        if (currentScore >= Number(advancedLine.thresholdScore || 0)) return 'advanced'
+        if (intermediateLine && currentScore >= Number(intermediateLine.thresholdScore || 0)) return 'intermediate'
         return 'beginner'
       }
-      const advancedLine = standards[standards.length - 1]
-      const intermediateLine = standards.length >= 2 ? standards[standards.length - 2] : null
-      if (currentScore >= Number(advancedLine.thresholdScore || 0)) return 'advanced'
-      if (intermediateLine && currentScore >= Number(intermediateLine.thresholdScore || 0)) return 'intermediate'
+      const direction = (item && item.scoreDirection) || (item && item.direction) || 'higher'
+      if (direction === 'lower') {
+        if (currentScore <= 220) return 'advanced'
+        if (currentScore <= 280) return 'intermediate'
+        return 'beginner'
+      }
+      if (currentScore >= 80) return 'advanced'
+      if (currentScore >= 60) return 'intermediate'
       return 'beginner'
     },
     scoreLevelText(value) {

@@ -92,48 +92,22 @@
           </button>
         </view>
 
-        <view class="section-title">训练完成确认</view>
+        <view class="section-title">今日训练项</view>
         <view v-if="todayPlanItems.length" class="unlock-card">
           <view class="row-between line">
-            <text class="label">今日训练项</text>
+            <text class="label">今日进度</text>
             <text class="value">{{ completedTodayCount }}/{{ todayPlanItems.length }}</text>
           </view>
-          <view
-            class="course-row"
-            v-for="item in todayPlanItems"
-            :key="`done_${item.id}`"
-          >
-            <view class="course-main">
-              <view class="course-title">{{ item.exerciseName || ('动作#' + (item.exerciseId || '-')) }}</view>
-              <view class="course-meta">{{ item.setsCount || 0 }}组 · {{ item.repsCount || 0 }}次 · {{ item.durationMinutes || 0 }}分钟</view>
-            </view>
-            <button
-              v-if="canConfirmDone(item)"
-              class="uf-btn-secondary mini-btn"
-              :disabled="Number(item.completed) === 1"
-              @click="markItemDone(item)"
+          <view v-if="pendingTodayItems.length">
+            <view
+              class="course-row"
+              v-for="item in pendingTodayItems"
+              :key="`pending_${item.id}`"
             >
-              {{ Number(item.completed) === 1 ? '已完成' : '确认完成' }}
-            </button>
-            <text v-else class="uf-hint">{{ confirmDoneHint(item) }}</text>
-          </view>
-        </view>
-        <view v-else class="empty">今天不是训练日，或当前计划暂无待训练动作。你也可以在下方课程列表中手动确认完成。</view>
-
-        <view class="section-title">计划关联课程</view>
-        <view v-if="groupedCourses.length">
-          <view class="group-card" v-for="group in groupedCourses" :key="group.key">
-            <view class="group-title">第 {{ group.weekNo }} 周 · 第 {{ group.dayNo }} 训练日</view>
-            <view class="course-row" v-for="item in group.rows" :key="`${group.key}_${item.courseIndex}`">
               <view class="course-main">
                 <view class="course-title">{{ item.exerciseName || ('动作#' + (item.exerciseId || '-')) }}</view>
-                <view class="course-meta">
-                  {{ item.setsCount || 0 }}组 · {{ item.repsCount || 0 }}次 · {{ item.durationMinutes || 0 }}分钟
-                </view>
+                <view class="course-meta">{{ item.setsCount || 0 }}组 · {{ item.repsCount || 0 }}次 · {{ item.durationMinutes || 0 }}分钟</view>
                 <view class="course-note" v-if="item.intensityNote">{{ item.intensityNote }}</view>
-                <view class="course-lock" v-if="isCourseLocked(item.courseIndex)">
-                  当前第 {{ item.courseIndex + 1 }} 节，需付费解锁后查看动作
-                </view>
               </view>
               <view class="course-actions">
                 <button
@@ -144,19 +118,70 @@
                   {{ isCourseLocked(item.courseIndex) ? '付费解锁' : '查看动作' }}
                 </button>
                 <button
-                  v-if="canConfirmDone(item) && item.id"
+                  v-if="canConfirmDone(item)"
                   class="uf-btn-primary mini-btn"
-                  :disabled="Number(item.completed) === 1"
                   @click="markItemDone(item)"
-                >
-                  {{ Number(item.completed) === 1 ? '已完成' : '确认完成' }}
-                </button>
-                <text v-else-if="item.id" class="uf-hint">{{ confirmDoneHint(item) }}</text>
+                >确认完成</button>
+                <text v-else class="uf-hint">{{ confirmDoneHint(item) }}</text>
+              </view>
+            </view>
+          </view>
+          <view v-else class="empty">今日训练项已全部完成。</view>
+        </view>
+        <view v-else class="empty">今天不是训练日，或当前计划暂无待训练动作。</view>
+
+        <view v-if="doneTodayItems.length">
+          <view class="section-title">今日已完成</view>
+          <view class="group-card">
+            <view class="course-row" v-for="item in doneTodayItems" :key="`done_${item.id}`">
+              <view class="course-main">
+                <view class="course-title">{{ item.exerciseName || ('动作#' + (item.exerciseId || '-')) }}</view>
+                <view class="course-meta">{{ item.setsCount || 0 }}组 · {{ item.repsCount || 0 }}次 · {{ item.durationMinutes || 0 }}分钟</view>
+                <view class="course-note" v-if="item.intensityNote">{{ item.intensityNote }}</view>
+              </view>
+              <text class="done-badge">已完成</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="section-title">其余计划课程</view>
+        <view v-if="otherPlanGroups.length" class="group-card overflow-visible">
+          <view class="fold-header" @click="toggleOtherCourses">
+            <view>
+              <view class="course-title">课程总览</view>
+              <view class="course-meta">剩余 {{ otherPlanGroups.length }} 个训练日，默认折叠展示</view>
+            </view>
+            <text class="fold-trigger">{{ otherCoursesExpanded ? '收起' : '展开' }}</text>
+          </view>
+          <view v-if="otherCoursesExpanded">
+            <view class="group-card nested-group-card" v-for="group in otherPlanGroups" :key="group.key">
+              <view class="group-title">第 {{ group.weekNo }} 周 · 第 {{ group.dayNo }} 训练日</view>
+              <view class="course-row" v-for="item in group.rows" :key="`${group.key}_${item.courseIndex}`">
+                <view class="course-main">
+                  <view class="course-title">{{ item.exerciseName || ('动作#' + (item.exerciseId || '-')) }}</view>
+                  <view class="course-meta">
+                    {{ item.setsCount || 0 }}组 · {{ item.repsCount || 0 }}次 · {{ item.durationMinutes || 0 }}分钟
+                  </view>
+                  <view class="course-note" v-if="item.intensityNote">{{ item.intensityNote }}</view>
+                  <view class="course-lock" v-if="isCourseLocked(item.courseIndex)">
+                    当前第 {{ item.courseIndex + 1 }} 节，需付费解锁后查看动作
+                  </view>
+                </view>
+                <view class="course-actions">
+                  <text v-if="Number(item.completed) === 1" class="done-badge">已完成</text>
+                  <button
+                    v-else-if="item.exerciseId"
+                    class="uf-btn-secondary mini-btn"
+                    @click="onCourseAction(item)"
+                  >
+                    {{ isCourseLocked(item.courseIndex) ? '付费解锁' : '查看动作' }}
+                  </button>
+                </view>
               </view>
             </view>
           </view>
         </view>
-        <view v-else class="empty">该计划暂无课程内容。</view>
+        <view v-else class="empty">该计划暂无其他课程内容。</view>
       </view>
     </view>
   </view>
@@ -184,7 +209,8 @@ export default {
         amount: 9.9,
         createdAt: null,
         paidAt: null
-      }
+      },
+      otherCoursesExpanded: false
     }
   },
   computed: {
@@ -239,8 +265,23 @@ export default {
       }
       return rows.filter(item => Number(item.dayNo) === this.todayTrainingDayNo)
     },
+    pendingTodayItems() {
+      return this.todayPlanItems.filter(item => Number(item.completed) !== 1)
+    },
+    doneTodayItems() {
+      return this.todayPlanItems.filter(item => Number(item.completed) === 1)
+    },
+    otherPlanGroups() {
+      const todayIds = new Set(this.todayPlanItems.map(item => item.id))
+      return this.groupedCourses
+        .map(group => ({
+          ...group,
+          rows: group.rows.filter(item => !todayIds.has(item.id))
+        }))
+        .filter(group => group.rows.length)
+    },
     completedTodayCount() {
-      return this.todayPlanItems.filter(item => Number(item.completed) === 1).length
+      return this.doneTodayItems.length
     }
   },
   onLoad(options) {
@@ -505,11 +546,10 @@ export default {
       return 'status-active'
     },
     canConfirmDone(item) {
-      return !!(item && item.id && this.planUnlocked && !this.isCourseLocked(item.courseIndex) && !this.hasTodayCompletedOtherItem(item))
+      return !!(item && item.id && this.planUnlocked && !this.isCourseLocked(item.courseIndex) && this.isTodayPlanItem(item) && Number(item.completed) !== 1)
     },
-    hasTodayCompletedOtherItem(item) {
-      const rows = this.plan.items || []
-      return rows.some(row => Number(row.completed) === 1 && row.id !== item.id && this.isToday(row.completeTime))
+    isTodayPlanItem(item) {
+      return !!item && this.todayPlanItems.some(row => row.id === item.id)
     },
     isToday(value) {
       if (!value) return false
@@ -523,8 +563,12 @@ export default {
     confirmDoneHint(item) {
       if (!this.planUnlocked) return '需解锁计划'
       if (this.isCourseLocked(item.courseIndex)) return '未解锁不可完成'
-      if (this.hasTodayCompletedOtherItem(item)) return '今日已完成一次'
+      if (!this.isTodayPlanItem(item)) return '请在今日训练项中完成'
+      if (Number(item.completed) === 1) return '已完成'
       return ''
+    },
+    toggleOtherCourses() {
+      this.otherCoursesExpanded = !this.otherCoursesExpanded
     },
     async markItemDone(item) {
       if (!this.canConfirmDone(item) || Number(item.completed) === 1) {
@@ -536,6 +580,7 @@ export default {
       })
       uni.showToast({ title: '已记录完成', icon: 'success' })
       await this.loadPlanDetail()
+      this.loadCourseUnlockState()
     },
     goExercise(id) {
       uni.navigateTo({ url: `/pages/exercise/detail?id=${id}` })
@@ -623,6 +668,14 @@ export default {
   overflow: hidden;
 }
 
+.overflow-visible {
+  overflow: visible;
+}
+
+.nested-group-card {
+  margin: 12rpx 14rpx 14rpx;
+}
+
 .group-title {
   padding: 12rpx 14rpx;
   font-size: 24rpx;
@@ -630,6 +683,19 @@ export default {
   color: $text-primary;
   background: #f8fafc;
   border-bottom: 1px solid $border-color;
+}
+
+.fold-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 18rpx;
+}
+
+.fold-trigger {
+  font-size: 24rpx;
+  color: $primary-color;
+  font-weight: 600;
 }
 
 .course-row {
@@ -677,6 +743,15 @@ export default {
   margin-top: 6rpx;
   font-size: 21rpx;
   color: #b45309;
+}
+
+.done-badge {
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: #ecfdf3;
+  color: #15803d;
+  font-size: 22rpx;
+  font-weight: 600;
 }
 
 .mini-btn {

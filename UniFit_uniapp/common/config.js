@@ -1,6 +1,10 @@
 const storedBaseUrl = typeof uni !== 'undefined' && uni.getStorageSync ? uni.getStorageSync('unifit_base_url') : ''
+const envBaseUrl = typeof import.meta !== 'undefined' && import.meta.env ? (import.meta.env.VITE_UNI_BASE_URL || '') : ''
 
 function resolveDefaultBaseUrl() {
+  if (envBaseUrl) {
+    return envBaseUrl
+  }
   if (typeof window !== 'undefined' && window.location && /^https?:$/i.test(window.location.protocol)) {
     const host = window.location.hostname || ''
     if (host === 'localhost' || host === '127.0.0.1') {

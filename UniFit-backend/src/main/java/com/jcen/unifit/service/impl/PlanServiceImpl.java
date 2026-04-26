@@ -195,24 +195,9 @@ public class PlanServiceImpl implements PlanService {
         if (plan == null || !plan.getUserId().equals(loginUser.getId())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限操作");
         }
-        long courseIndex = userPlanItemMapper.selectCount(new QueryWrapper<UserPlanItem>()
-                .eq("user_plan_id", item.getUserPlanId())
-                .lt("id", item.getId()));
-        if (courseIndex >= 2) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "未解锁课程不可确认完成");
-        }
         LocalDate today = LocalDate.now();
         Date start = Date.from(today.atStartOfDay(ZoneId.systemDefault()).toInstant());
         Date end = Date.from(today.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
-        UserPlanItem todayCompleted = userPlanItemMapper.selectOne(new QueryWrapper<UserPlanItem>()
-                .eq("user_plan_id", plan.getId())
-                .eq("completed", 1)
-                .ge("complete_time", start)
-                .lt("complete_time", end)
-                .last("limit 1"));
-        if (todayCompleted != null && !todayCompleted.getId().equals(item.getId())) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "一天只能确认完成一次训练动作");
-        }
         if (Integer.valueOf(1).equals(item.getCompleted())) {
             return true;
         }

@@ -20,6 +20,8 @@ public class LoginUserVO implements Serializable {
 
     private String userPhone;
 
+    private String userEmail;
+
     private BigDecimal balance;
 
     private Integer planUnlocked;

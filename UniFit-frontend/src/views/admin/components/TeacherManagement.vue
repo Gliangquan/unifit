@@ -35,6 +35,7 @@
         :data-source="rows" 
         :loading="loading" 
         :pagination="pagination" 
+        :scroll="{ x: 1260 }"
         row-key="id"
         @change="onPageChange"
       >
@@ -167,13 +168,13 @@ const editForm = reactive({
 });
 
 const columns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80, fixed: 'left' },
   { title: '账号', dataIndex: 'userAccount', key: 'userAccount', width: 140 },
   { title: '姓名', dataIndex: 'userName', key: 'userName', width: 120 },
   { title: '手机号', dataIndex: 'userPhone', key: 'userPhone', width: 140 },
-  { title: '邮箱', dataIndex: 'userEmail', key: 'userEmail', width: 160 },
+  { title: '邮箱', dataIndex: 'userEmail', key: 'userEmail', width: 220 },
   { title: '状态', key: 'status', width: 100 },
-  { title: '操作', key: 'action', width: 280 },
+  { title: '操作', key: 'action', width: 280, fixed: 'right' },
 ];
 
 const load = async () => {

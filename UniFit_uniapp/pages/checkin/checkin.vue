@@ -21,9 +21,17 @@
         :selected="calendarCheckins"
         :showMonth="false"
       />
-      <view class="checkin-tip">橙点表示已打卡，请输入本次实际运动时长后完成今日训练打卡。</view>
-      <input v-if="planUnlocked && !todayCheckedIn" class="uf-input" v-model="duration" type="number" placeholder="请输入本次运动时长(分钟)" />
-      <button v-if="planUnlocked && !todayCheckedIn" class="uf-btn-primary" @click="doCheckin">完成打卡</button>
+      <view class="checkin-tip">请先在训练计划中确认完成今日训练动作，再填写本次实际运动时长进行打卡。</view>
+      <view v-if="planUnlocked && !todayCheckedIn">
+        <view class="checkin-status" :class="todayTrainingDone ? 'checkin-status-success' : 'checkin-status-warning'">
+          {{ todayTrainingDone ? '今日训练已完成，可填写时长并提交打卡' : '今日训练未完成，请先前往训练计划页确认完成' }}
+        </view>
+        <view v-if="todayTrainingDone">
+          <input class="uf-input checkin-input" v-model="duration" type="number" placeholder="请输入本次实际运动时长(分钟)" />
+          <button class="uf-btn-primary" @click="doCheckin">完成打卡</button>
+        </view>
+        <button v-else class="uf-btn-secondary" @click="goCurrentPlan">去完成训练</button>
+      </view>
       <view v-else-if="planUnlocked" class="locked-tip">今天已打卡，无需重复提交</view>
       <view v-else class="locked-tip">请先解锁训练计划后打卡</view>
     </view>
@@ -82,7 +90,7 @@ export default {
     return {
       user: {},
       planUnlocked: false,
-      duration: '60',
+      duration: '',
       streak: 0,
       ranking: [],
       rankingDays: 7,
@@ -103,6 +111,10 @@ export default {
       const d = `${today.getDate()}`.padStart(2, '0')
       const todayText = `${y}-${m}-${d}`
       return (this.calendarCheckins || []).some(item => item && item.date === todayText)
+    },
+    todayTrainingDone() {
+      const items = (this.currentPlan && this.currentPlan.items) || []
+      return items.some(item => Number(item.completed) === 1 && this.isToday(item.completeTime))
     }
   },
   async onShow() {
@@ -148,6 +160,18 @@ export default {
       this.currentPlan = currentPlan || null
       this.calendarCheckins = calendarCheckins || []
     },
+    isToday(value) {
+      if (!value) return false
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) return false
+      const now = new Date()
+      return date.getFullYear() === now.getFullYear()
+        && date.getMonth() === now.getMonth()
+        && date.getDate() === now.getDate()
+    },
+    goCurrentPlan() {
+      uni.navigateTo({ url: '/pages/plan/current' })
+    },
     async doCheckin() {
       if (!this.currentPlan || !this.currentPlan.planId) {
         uni.showToast({ title: '请先生成训练计划', icon: 'none' })
@@ -157,9 +181,13 @@ export default {
         uni.showToast({ title: '今天已打卡', icon: 'none' })
         return
       }
+      if (!this.todayTrainingDone) {
+        uni.showToast({ title: '请先完成今日训练动作', icon: 'none' })
+        return
+      }
       const duration = Number(String(this.duration || '').trim())
       if (!Number.isFinite(duration) || duration <= 0) {
-        uni.showToast({ title: '请输入正确的运动时长', icon: 'none' })
+        uni.showToast({ title: '请填写本次实际运动时长', icon: 'none' })
         return
       }
       const result = await request({
@@ -171,6 +199,7 @@ export default {
         }
       })
       uni.showToast({ title: result && result.alreadyCheckedIn ? '今天已打过卡' : '打卡成功', icon: 'success' })
+      this.duration = ''
       this.refresh()
     }
   }
@@ -254,6 +283,31 @@ export default {
   font-size: 24rpx;
   color: #9ca3af;
   text-align: center;
+}
+
+.checkin-status {
+  margin: 12rpx 0 16rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.checkin-status-success {
+  background: #ecfdf3;
+  color: #15803d;
+}
+
+.checkin-status-warning {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.checkin-input {
+  display: block;
+  width: 100%;
+  min-height: 84rpx;
+  line-height: 84rpx;
 }
 
 .rank-row {
