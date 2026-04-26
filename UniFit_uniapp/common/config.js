@@ -1,7 +1,14 @@
 const storedBaseUrl = typeof uni !== 'undefined' && uni.getStorageSync ? uni.getStorageSync('unifit_base_url') : ''
-const envBaseUrl = typeof import.meta !== 'undefined' && import.meta.env ? (import.meta.env.VITE_UNI_BASE_URL || '') : ''
+
+function resolveEnvBaseUrl() {
+  // #ifdef H5
+  return (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_UNI_BASE_URL) || ''
+  // #endif
+  return ''
+}
 
 function resolveDefaultBaseUrl() {
+  const envBaseUrl = resolveEnvBaseUrl()
   if (envBaseUrl) {
     return envBaseUrl
   }
