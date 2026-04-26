@@ -8,6 +8,7 @@ import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.SetBucketPolicyArgs;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -62,6 +63,17 @@ public class MinioFileStorageServiceImpl implements FileStorageService {
         if (!found) {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
         }
+        ensurePublicReadPolicy(bucket);
+    }
+
+    private void ensurePublicReadPolicy(String bucket) throws Exception {
+        String policy = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetBucketLocation\",\"s3:ListBucket\"],\"Resource\":[\"arn:aws:s3:::" + bucket + "\"]},{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::" + bucket + "/*\"]}]}";
+        minioClient.setBucketPolicy(
+                SetBucketPolicyArgs.builder()
+                        .bucket(bucket)
+                        .config(policy)
+                        .build()
+        );
     }
 
     private String buildFileUrl(String bucket, String objectName) {
