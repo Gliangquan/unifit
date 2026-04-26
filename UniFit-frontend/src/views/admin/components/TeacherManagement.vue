@@ -274,10 +274,11 @@ const submitEdit = async () => {
         checkPassword: editForm.userPassword,
         userName: editForm.userName,
         userPhone: editForm.userPhone,
+        userEmail: editForm.userEmail,
       });
       message.success('教师添加成功');
     } else {
-      await updateUser(currentUser.value.id, editForm.userName, editForm.userPhone);
+      await updateUser(currentUser.value.id, editForm.userName, editForm.userPhone, editForm.userEmail);
       message.success('教师信息更新成功');
     }
     editVisible.value = false;

@@ -143,6 +143,7 @@ public class UserController {
         long userId = userService.userRegister(request.getUserAccount(), request.getUserPassword(), request.getUserPassword(), request.getUserPhone(), request.getUserName());
         User user = userService.getById(userId);
         user.setUserRole("teacher");
+        user.setUserEmail(StringUtils.trimToNull(request.getUserEmail()));
         userService.updateById(user);
         return ResultUtils.success(userId);
     }

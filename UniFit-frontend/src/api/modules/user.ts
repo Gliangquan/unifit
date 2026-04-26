@@ -35,6 +35,7 @@ export interface UserRegisterRequest {
   userPassword: string;
   checkPassword: string;
   userPhone?: string;
+  userEmail?: string;
   userName: string;
 }
 

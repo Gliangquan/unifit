@@ -13,5 +13,7 @@ public class UserRegisterRequest {
 
     private String userPhone;
 
+    private String userEmail;
+
     private String userName;
 }
