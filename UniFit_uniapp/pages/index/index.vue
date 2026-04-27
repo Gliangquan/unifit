@@ -62,7 +62,7 @@
           <text class="plan-value">{{ testItemLabel(currentPlan.testItemCode) }}</text>
         </view>
         <view class="plan-row">
-          <text class="plan-label">等级</text>
+          <text class="plan-label">计划分档</text>
           <text class="plan-value">{{ scoreLevelLabel(currentPlan.scoreLevel) }}</text>
         </view>
         <view class="plan-row">
@@ -310,11 +310,11 @@ export default {
     },
     scoreLevelLabel(level) {
       const map = {
-        beginner: '初级',
-        intermediate: '中级',
-        advanced: '高级'
+        beginner: '基础档',
+        intermediate: '提升档',
+        advanced: '强化档'
       }
-      return map[level] || '未知等级'
+      return map[level] || '未知分档'
     },
     fitnessLevelLabel(level) {
       const map = {

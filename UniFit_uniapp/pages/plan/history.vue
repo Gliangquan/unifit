@@ -16,7 +16,7 @@
             <view class="plan-title">计划 #{{ plan.planId || plan.id }}</view>
             <view :class="['uf-pill', statusClass(plan.status)]">{{ statusText(plan.status) }}</view>
           </view>
-          <view class="plan-sub">项目：{{ testItemLabel(plan.testItemCode) }} · 等级：{{ scoreLevelLabel(plan.scoreLevel) }}</view>
+          <view class="plan-sub">项目：{{ testItemLabel(plan.testItemCode) }} · 分档：{{ scoreLevelLabel(plan.scoreLevel) }}</view>
           <view class="plan-sub">基础：{{ fitnessLevelLabel(plan.fitnessLevel) }} · 器械：{{ equipmentTypeLabel(plan.equipmentType) }}</view>
           <view class="plan-sub">周期：{{ formatDate(plan.startDate) }} ~ {{ formatDate(plan.endDate) }}</view>
           <view class="plan-sub">频率：每周 {{ plan.daysPerWeek || 0 }} 天 · 完成度：{{ progress(plan) }}</view>
@@ -121,11 +121,11 @@ export default {
     },
     scoreLevelLabel(level) {
       const map = {
-        beginner: '初级',
-        intermediate: '中级',
-        advanced: '高级'
+        beginner: '基础档',
+        intermediate: '提升档',
+        advanced: '强化档'
       }
-      return map[level] || '未知等级'
+      return map[level] || '未知分档'
     },
     fitnessLevelLabel(level) {
       const map = {

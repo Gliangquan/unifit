@@ -82,7 +82,7 @@
               <text class="info-value">{{ currentPlan.testItemName }}</text>
             </view>
             <view class="info-row">
-              <text class="info-label">成绩等级</text>
+              <text class="info-label">计划分档</text>
               <text class="info-value">{{ scoreLevelText(currentPlan.scoreLevel) }}</text>
             </view>
             <view class="info-row">
@@ -177,7 +177,7 @@
             <view class="form-item form-item-half">
               <view class="form-label">
                 <uni-icons type="star" size="18" color="#64748b"></uni-icons>
-                <text>成绩等级</text>
+                <text>计划分档</text>
               </view>
               <view class="form-input readonly-field">{{ scoreLevelText(form.scoreLevel) }}</view>
             </view>
@@ -681,9 +681,9 @@ export default {
     },
     scoreLevelText(value) {
       const map = {
-        beginner: '初级',
-        intermediate: '中级',
-        advanced: '高级'
+        beginner: '基础档',
+        intermediate: '提升档',
+        advanced: '强化档'
       }
       return map[value] || '待计算'
     },

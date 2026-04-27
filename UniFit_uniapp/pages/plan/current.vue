@@ -30,7 +30,7 @@
             <text class="value">{{ testItemLabel(plan.testItemCode) }}</text>
           </view>
           <view class="row-between line">
-            <text class="label">能力等级</text>
+            <text class="label">计划分档</text>
             <text class="value">{{ scoreLevelLabel(plan.scoreLevel) }}</text>
           </view>
           <view class="row-between line">
@@ -62,37 +62,29 @@
 
         <view class="unlock-card">
           <view class="row-between line">
-            <text class="label">课程查看权限</text>
+            <text class="label">计划权限</text>
             <text :class="['uf-pill', courseUnlock.unlocked ? 'status-completed' : 'status-archived']">
-              {{ courseUnlock.unlocked ? '已解锁' : '仅前2节可查看' }}
+              {{ courseUnlock.unlocked ? '已开通' : '未开通' }}
             </text>
           </view>
           <view class="row-between line">
-            <text class="label">解锁订单</text>
+            <text class="label">开通方式</text>
             <text class="value">{{ unlockOrderDisplayText() }}</text>
           </view>
           <view class="row-between line">
-            <text class="label">解锁费用</text>
+            <text class="label">开通费用</text>
             <text class="value">¥{{ Number(courseUnlock.amount || 0).toFixed(2) }}</text>
           </view>
-          <view class="row-between line" v-if="courseUnlock.createdAt && courseUnlock.orderNo">
-            <text class="label">下单时间</text>
-            <text class="value">{{ formatDateTime(courseUnlock.createdAt) }}</text>
-          </view>
-          <view class="row-between line" v-else-if="courseUnlock.paidAt">
-            <text class="label">解锁时间</text>
-            <text class="value">{{ formatDateTime(courseUnlock.paidAt) }}</text>
-          </view>
-          <view class="row-between line" v-if="courseUnlock.paidAt && courseUnlock.orderNo">
-            <text class="label">支付时间</text>
+          <view class="row-between line" v-if="courseUnlock.paidAt">
+            <text class="label">开通时间</text>
             <text class="value">{{ formatDateTime(courseUnlock.paidAt) }}</text>
           </view>
           <button
             v-if="!courseUnlock.unlocked"
             class="uf-btn-primary mini-btn"
-            @click="createOrPayUnlockOrder"
+            @click="goPurchasePlan"
           >
-            {{ courseUnlock.status === 'pending' ? '去支付解锁' : '生成解锁订单' }}
+            去开通计划
           </button>
         </view>
 
@@ -119,7 +111,7 @@
                   class="uf-btn-secondary mini-btn"
                   @click="onCourseAction(item)"
                 >
-                  {{ isCourseLocked(item.courseIndex) ? '付费解锁' : '查看动作' }}
+                  {{ isCourseLocked(item.courseIndex) ? '去开通计划' : '查看动作' }}
                 </button>
                 <button
                   v-if="canConfirmDone(item)"
@@ -168,7 +160,7 @@
                   </view>
                   <view class="course-note" v-if="item.intensityNote">{{ item.intensityNote }}</view>
                   <view class="course-lock" v-if="isCourseLocked(item.courseIndex)">
-                    当前第 {{ item.courseIndex + 1 }} 节，需付费解锁后查看动作
+                    当前账号未开通训练计划，开通后可查看动作
                   </view>
                 </view>
                 <view class="course-actions">
@@ -178,7 +170,7 @@
                     class="uf-btn-secondary mini-btn"
                     @click="onCourseAction(item)"
                   >
-                    {{ isCourseLocked(item.courseIndex) ? '付费解锁' : '查看动作' }}
+                    {{ isCourseLocked(item.courseIndex) ? '去开通计划' : '查看动作' }}
                   </button>
                 </view>
               </view>
@@ -209,9 +201,7 @@ export default {
       courseUnlock: {
         unlocked: false,
         status: 'none',
-        orderNo: '',
-        amount: 9.9,
-        createdAt: null,
+        amount: 19.9,
         paidAt: null
       },
       otherCoursesExpanded: false
@@ -345,207 +335,37 @@ export default {
       }
       this.plan = await request({ url: '/plan/current', showError: false }).catch(() => null) || {}
     },
-    getCourseUnlockStorageKey() {
-      const uid = this.user.id || (uni.getStorageSync('user') || {}).id || 'guest'
-      const pid = this.plan.planId || this.planIdParam || 'none'
-      return `course_unlock_${uid}_${pid}`
-    },
     loadCourseUnlockState() {
-      const fallback = {
-        unlocked: false,
-        status: 'none',
-        orderNo: '',
-        amount: 9.9,
-        createdAt: null,
-        paidAt: null
+      const unlocked = Number(this.user.planUnlocked || 0) === 1
+      const unlockTime = this.user.planUnlockTime || null
+      this.courseUnlock = {
+        unlocked,
+        status: unlocked ? 'paid' : 'none',
+        amount: 19.9,
+        paidAt: unlockTime
       }
-      if (!this.plan.planId) {
-        this.courseUnlock = fallback
-        return
-      }
-      const backendUnlocked = Number(this.user.planUnlocked || 0) === 1
-      if (backendUnlocked) {
-        const unlockTime = this.user.planUnlockTime || null
-        this.courseUnlock = {
-          ...fallback,
-          unlocked: true,
-          status: 'paid',
-          orderNo: '',
-          amount: Number(fallback.amount),
-          createdAt: unlockTime,
-          paidAt: unlockTime
-        }
-        this.saveCourseUnlockState()
-        return
-      }
-      try {
-        const value = uni.getStorageSync(this.getCourseUnlockStorageKey())
-        if (value && typeof value === 'object') {
-          this.courseUnlock = {
-            ...fallback,
-            ...value,
-            amount: Number(value.amount || 9.9)
-          }
-          this.ensurePurchaseRecordSynced()
-          return
-        }
-      } catch (e) {}
-      const restored = this.restoreCourseUnlockFromPurchaseRecords()
-      if (restored) {
-        this.courseUnlock = {
-          ...fallback,
-          ...restored
-        }
-        this.saveCourseUnlockState()
-        this.ensurePurchaseRecordSynced()
-        return
-      }
-      this.courseUnlock = fallback
-    },
-    saveCourseUnlockState() {
-      if (!this.plan.planId) return
-      uni.setStorageSync(this.getCourseUnlockStorageKey(), this.courseUnlock)
     },
     unlockOrderDisplayText() {
-      if (this.courseUnlock.orderNo) {
-        return this.courseUnlock.orderNo
-      }
-      if (this.courseUnlock.unlocked) {
-        return '后台已解锁'
-      }
-      return '未生成'
+      return this.courseUnlock.unlocked ? '后台统一开通' : '需先购买方案'
     },
     isCourseLocked(courseIndex) {
-      return Number(courseIndex) >= 2 && !this.courseUnlock.unlocked
+      return !this.courseUnlock.unlocked
     },
-    getPurchaseOrderListKey() {
-      const uid = this.user.id || (uni.getStorageSync('user') || {}).id || 'guest'
-      return `purchase_orders_${uid}`
-    },
-    getPurchaseRecords() {
-      const list = uni.getStorageSync(this.getPurchaseOrderListKey()) || []
-      return Array.isArray(list) ? list : []
-    },
-    restoreCourseUnlockFromPurchaseRecords() {
-      const planId = Number(this.plan.planId || this.planIdParam || 0)
-      if (!planId) return null
-      const paidRecord = this.getPurchaseRecords()
-        .filter(item => item
-          && Number(item.planId) === planId
-          && (item.type === 'course_unlock' || item.typeText === '课程解锁')
-          && item.status === 'paid')
-        .sort((a, b) => Number(b.paidAt || b.createdAt || 0) - Number(a.paidAt || a.createdAt || 0))[0]
-      if (!paidRecord) return null
-      return {
-        unlocked: true,
-        status: 'paid',
-        orderNo: paidRecord.orderNo || '',
-        amount: Number(paidRecord.amount || 9.9),
-        createdAt: paidRecord.createdAt || null,
-        paidAt: paidRecord.paidAt || paidRecord.createdAt || null
-      }
-    },
-    upsertPurchaseRecord(payload) {
-      if (!payload || !payload.orderNo) return
-      const list = this.getPurchaseRecords()
-      const index = list.findIndex(item => item.orderNo === payload.orderNo)
-      const next = {
-        orderNo: payload.orderNo,
-        type: 'course_unlock',
-        typeText: '课程解锁',
-        planId: this.plan.planId || this.planIdParam || null,
-        planName: `${this.testItemLabel(this.plan.testItemCode)}训练计划`,
-        amount: Number(payload.amount || 0),
-        status: payload.status || 'pending',
-        statusText: payload.status === 'paid' ? '已支付' : '待支付',
-        createdAt: payload.createdAt || Date.now(),
-        paidAt: payload.paidAt || null
-      }
-      if (index >= 0) {
-        list[index] = { ...list[index], ...next }
-      } else {
-        list.unshift(next)
-      }
-      list.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
-      uni.setStorageSync(this.getPurchaseOrderListKey(), list)
-    },
-    ensurePurchaseRecordSynced() {
-      if (!this.courseUnlock.orderNo) return
-      this.upsertPurchaseRecord({
-        orderNo: this.courseUnlock.orderNo,
-        amount: this.courseUnlock.amount,
-        status: this.courseUnlock.unlocked ? 'paid' : (this.courseUnlock.status || 'pending'),
-        createdAt: this.courseUnlock.createdAt,
-        paidAt: this.courseUnlock.paidAt
-      })
-    },
-    async createOrPayUnlockOrder() {
-      if (this.courseUnlock.unlocked) {
-        return
-      }
-      if (!this.courseUnlock.orderNo || this.courseUnlock.status === 'none') {
-        this.courseUnlock = {
-          ...this.courseUnlock,
-          orderNo: `CUNLOCK${Date.now()}${Math.floor(Math.random() * 1000)}`,
-          status: 'pending',
-          createdAt: Date.now()
-        }
-        this.saveCourseUnlockState()
-        this.upsertPurchaseRecord({
-          orderNo: this.courseUnlock.orderNo,
-          amount: this.courseUnlock.amount,
-          status: 'pending',
-          createdAt: this.courseUnlock.createdAt
-        })
-        uni.showToast({ title: '解锁订单已生成', icon: 'success' })
-      }
-      await this.payUnlockOrder()
-    },
-    payUnlockOrder() {
-      if (this.courseUnlock.unlocked || this.courseUnlock.status !== 'pending') {
-        return Promise.resolve()
-      }
-      return new Promise((resolve) => {
-        uni.showModal({
-          title: '课程付费解锁',
-          content: `订单号：${this.courseUnlock.orderNo}\n支付 ¥${Number(this.courseUnlock.amount).toFixed(2)} 后可查看第3节及后续课程动作`,
-          confirmText: '立即支付',
-          success: (res) => {
-            if (res.confirm) {
-              this.courseUnlock = {
-                ...this.courseUnlock,
-                unlocked: true,
-                status: 'paid',
-                paidAt: Date.now()
-              }
-              this.saveCourseUnlockState()
-              this.upsertPurchaseRecord({
-                orderNo: this.courseUnlock.orderNo,
-                amount: this.courseUnlock.amount,
-                status: 'paid',
-                createdAt: this.courseUnlock.createdAt,
-                paidAt: this.courseUnlock.paidAt
-              })
-              uni.showToast({ title: '解锁成功', icon: 'success' })
-            }
-            resolve()
-          },
-          fail: () => resolve()
-        })
-      })
+    goPurchasePlan() {
+      uni.showToast({ title: '请返回计划页先开通方案', icon: 'none' })
+      setTimeout(() => {
+        this.go('/pages/plan/plan')
+      }, 300)
     },
     async onCourseAction(item) {
       if (!item || !item.exerciseId) {
         return
       }
-      if (!this.isCourseLocked(item.courseIndex)) {
-        this.goExercise(item.exerciseId)
+      if (this.isCourseLocked(item.courseIndex)) {
+        await this.goPurchasePlan()
         return
       }
-      await this.createOrPayUnlockOrder()
-      if (!this.isCourseLocked(item.courseIndex)) {
-        this.goExercise(item.exerciseId)
-      }
+      this.goExercise(item.exerciseId)
     },
     testItemLabel(code) {
       if (!code) return '-'
@@ -553,11 +373,11 @@ export default {
     },
     scoreLevelLabel(level) {
       const map = {
-        beginner: '初级',
-        intermediate: '中级',
-        advanced: '高级'
+        beginner: '基础档',
+        intermediate: '提升档',
+        advanced: '强化档'
       }
-      return map[level] || '未知等级'
+      return map[level] || '未知分档'
     },
     fitnessLevelLabel(level) {
       const map = {
@@ -621,8 +441,8 @@ export default {
         && date.getDate() === now.getDate()
     },
     confirmDoneHint(item) {
-      if (!this.planUnlocked) return '需解锁计划'
-      if (this.isCourseLocked(item.courseIndex)) return '未解锁不可完成'
+      if (!this.planUnlocked) return '需先开通计划'
+      if (this.isCourseLocked(item.courseIndex)) return '未开通不可完成'
       if (!this.isTodayPlanItem(item)) return '请在今日训练项中完成'
       if (Number(item.completed) === 1) return '已完成'
       return ''
