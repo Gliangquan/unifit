@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -52,5 +53,13 @@ public class TestController {
     @GetMapping("/items")
     public BaseResponse<List<TestItem>> items() {
         return ResultUtils.success(testService.listTestItems());
+    }
+
+    @GetMapping("/score/level-preview")
+    public BaseResponse<Map<String, Object>> scoreLevelPreview(@RequestParam String itemCode,
+                                                               @RequestParam BigDecimal scoreValue,
+                                                               HttpServletRequest httpServletRequest) {
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        return ResultUtils.success(testService.getScoreLevelPreview(loginUser, itemCode, scoreValue));
     }
 }

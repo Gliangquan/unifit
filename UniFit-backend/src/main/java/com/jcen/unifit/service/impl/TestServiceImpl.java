@@ -236,6 +236,22 @@ public class TestServiceImpl implements TestService {
         return testItemMapper.selectList(qw);
     }
 
+    @Override
+    public Map<String, Object> getScoreLevelPreview(User loginUser, String itemCode, BigDecimal scoreValue) {
+        if (StringUtils.isBlank(itemCode) || scoreValue == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "成绩参数不完整");
+        }
+        ensureStudentVerified(loginUser);
+        TestStandard matched = matchStandard(loginUser.getId(), itemCode, scoreValue);
+        Map<String, Object> result = new HashMap<>();
+        result.put("itemCode", itemCode);
+        result.put("scoreValue", scoreValue);
+        result.put("level", mapStandardPointToPlanLevel(matched == null ? null : matched.getStandardPoint()));
+        result.put("standardPoint", matched == null ? 0 : matched.getStandardPoint());
+        result.put("standardLevel", matched == null ? "unknown" : matched.getLevel());
+        return result;
+    }
+
     private TestStandard matchStandard(Long userId, String itemCode, BigDecimal scoreValue) {
         HealthProfile profile = healthProfileMapper.selectOne(new QueryWrapper<HealthProfile>().eq("user_id", userId));
         String gender = profile == null || profile.getGender() == null ? "male" : profile.getGender();
@@ -249,6 +265,16 @@ public class TestServiceImpl implements TestService {
                 .orderByDesc("standard_point")
                 .last("limit 1");
         return testStandardMapper.selectOne(qw);
+    }
+
+    private String mapStandardPointToPlanLevel(Integer standardPoint) {
+        if (standardPoint == null || standardPoint < 60) {
+            return "beginner";
+        }
+        if (standardPoint < 80) {
+            return "intermediate";
+        }
+        return "advanced";
     }
 
     private void ensureStudentVerified(User loginUser) {

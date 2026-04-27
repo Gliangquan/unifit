@@ -258,6 +258,7 @@ export default {
         daysPerWeek: '3',
         bmiValue: null
       },
+      scoreLevelRequestId: 0,
       selectedTestItem: '',
       studentProfile: {},
       needStudentVerify: false,
@@ -362,6 +363,7 @@ export default {
         this.selectedTestItem = row.itemName
         this.form.currentScore = ''
         this.form.scoreLevel = ''
+        this.scoreLevelRequestId += 1
       }
     },
     onFitnessChange(e) {
@@ -371,9 +373,25 @@ export default {
         this.form.fitnessLevelLabel = row.label
       }
     },
-    syncScoreLevel() {
-      const currentScore = Number(String(this.form.currentScore ?? '').trim())
-      this.form.scoreLevel = Number.isFinite(currentScore) ? this.resolveScoreLevel(currentScore) : ''
+    async syncScoreLevel() {
+      const rawScore = String(this.form.currentScore ?? '').trim()
+      const currentScore = Number(rawScore)
+      const requestId = ++this.scoreLevelRequestId
+      if (!this.form.testItemCode || !rawScore || !Number.isFinite(currentScore) || currentScore < 0) {
+        this.form.scoreLevel = ''
+        return
+      }
+      try {
+        const preview = await request({
+          url: `/test/score/level-preview?itemCode=${encodeURIComponent(this.form.testItemCode)}&scoreValue=${encodeURIComponent(currentScore)}`,
+          showError: false
+        })
+        if (requestId !== this.scoreLevelRequestId) return
+        this.form.scoreLevel = (preview && preview.level) || ''
+      } catch (e) {
+        if (requestId !== this.scoreLevelRequestId) return
+        this.form.scoreLevel = this.resolveScoreLevel(currentScore)
+      }
     },
     onEquipmentChange(e) {
       const row = this.equipmentTypeOptions[Number(e.detail.value)]
@@ -435,7 +453,7 @@ export default {
         uni.showToast({ title: '请输入有效成绩', icon: 'none' })
         return null
       }
-      const scoreLevel = this.resolveScoreLevel(currentScore)
+      const scoreLevel = this.form.scoreLevel || this.resolveScoreLevel(currentScore)
       const daysPerWeek = Number(this.form.daysPerWeek)
       if (!Number.isInteger(daysPerWeek) || daysPerWeek < 1 || daysPerWeek > 7) {
         uni.showToast({ title: '训练天数需在1-7之间', icon: 'none' })

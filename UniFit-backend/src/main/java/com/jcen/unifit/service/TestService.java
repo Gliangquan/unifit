@@ -5,6 +5,7 @@ import com.jcen.unifit.model.entity.TestItem;
 import com.jcen.unifit.model.entity.User;
 import com.jcen.unifit.model.vo.TestScoreVO;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -19,4 +20,6 @@ public interface TestService {
     Map<String, Object> getClassCompare(User loginUser);
 
     List<TestItem> listTestItems();
+
+    Map<String, Object> getScoreLevelPreview(User loginUser, String itemCode, BigDecimal scoreValue);
 }
