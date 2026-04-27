@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Date;
 
 @Data
 public class LoginUserVO implements Serializable {
@@ -25,6 +26,8 @@ public class LoginUserVO implements Serializable {
     private BigDecimal balance;
 
     private Integer planUnlocked;
+
+    private Date planUnlockTime;
 
     private String token;
 

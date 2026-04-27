@@ -69,17 +69,21 @@
           </view>
           <view class="row-between line">
             <text class="label">解锁订单</text>
-            <text class="value">{{ courseUnlock.orderNo || '未生成' }}</text>
+            <text class="value">{{ unlockOrderDisplayText() }}</text>
           </view>
           <view class="row-between line">
             <text class="label">解锁费用</text>
             <text class="value">¥{{ Number(courseUnlock.amount || 0).toFixed(2) }}</text>
           </view>
-          <view class="row-between line" v-if="courseUnlock.createdAt">
+          <view class="row-between line" v-if="courseUnlock.createdAt && courseUnlock.orderNo">
             <text class="label">下单时间</text>
             <text class="value">{{ formatDateTime(courseUnlock.createdAt) }}</text>
           </view>
-          <view class="row-between line" v-if="courseUnlock.paidAt">
+          <view class="row-between line" v-else-if="courseUnlock.paidAt">
+            <text class="label">解锁时间</text>
+            <text class="value">{{ formatDateTime(courseUnlock.paidAt) }}</text>
+          </view>
+          <view class="row-between line" v-if="courseUnlock.paidAt && courseUnlock.orderNo">
             <text class="label">支付时间</text>
             <text class="value">{{ formatDateTime(courseUnlock.paidAt) }}</text>
           </view>
@@ -305,7 +309,7 @@ export default {
       const latestUser = await request({ url: '/user/get/login', showError: false }) || {}
       const localUser = uni.getStorageSync('user') || {}
       this.user = { ...localUser, ...latestUser, token: localUser.token }
-      this.planUnlocked = (latestUser && Number(latestUser.planUnlocked) === 1) || (localUser && Number(localUser.planUnlocked) === 1)
+      this.planUnlocked = Number(this.user.planUnlocked || 0) === 1
       setUser(this.user)
     },
     async loadStudentVerifyStatus() {
@@ -359,6 +363,21 @@ export default {
         this.courseUnlock = fallback
         return
       }
+      const backendUnlocked = Number(this.user.planUnlocked || 0) === 1
+      if (backendUnlocked) {
+        const unlockTime = this.user.planUnlockTime || null
+        this.courseUnlock = {
+          ...fallback,
+          unlocked: true,
+          status: 'paid',
+          orderNo: '',
+          amount: Number(fallback.amount),
+          createdAt: unlockTime,
+          paidAt: unlockTime
+        }
+        this.saveCourseUnlockState()
+        return
+      }
       try {
         const value = uni.getStorageSync(this.getCourseUnlockStorageKey())
         if (value && typeof value === 'object') {
@@ -371,11 +390,30 @@ export default {
           return
         }
       } catch (e) {}
+      const restored = this.restoreCourseUnlockFromPurchaseRecords()
+      if (restored) {
+        this.courseUnlock = {
+          ...fallback,
+          ...restored
+        }
+        this.saveCourseUnlockState()
+        this.ensurePurchaseRecordSynced()
+        return
+      }
       this.courseUnlock = fallback
     },
     saveCourseUnlockState() {
       if (!this.plan.planId) return
       uni.setStorageSync(this.getCourseUnlockStorageKey(), this.courseUnlock)
+    },
+    unlockOrderDisplayText() {
+      if (this.courseUnlock.orderNo) {
+        return this.courseUnlock.orderNo
+      }
+      if (this.courseUnlock.unlocked) {
+        return '后台已解锁'
+      }
+      return '未生成'
     },
     isCourseLocked(courseIndex) {
       return Number(courseIndex) >= 2 && !this.courseUnlock.unlocked
@@ -384,10 +422,32 @@ export default {
       const uid = this.user.id || (uni.getStorageSync('user') || {}).id || 'guest'
       return `purchase_orders_${uid}`
     },
+    getPurchaseRecords() {
+      const list = uni.getStorageSync(this.getPurchaseOrderListKey()) || []
+      return Array.isArray(list) ? list : []
+    },
+    restoreCourseUnlockFromPurchaseRecords() {
+      const planId = Number(this.plan.planId || this.planIdParam || 0)
+      if (!planId) return null
+      const paidRecord = this.getPurchaseRecords()
+        .filter(item => item
+          && Number(item.planId) === planId
+          && (item.type === 'course_unlock' || item.typeText === '课程解锁')
+          && item.status === 'paid')
+        .sort((a, b) => Number(b.paidAt || b.createdAt || 0) - Number(a.paidAt || a.createdAt || 0))[0]
+      if (!paidRecord) return null
+      return {
+        unlocked: true,
+        status: 'paid',
+        orderNo: paidRecord.orderNo || '',
+        amount: Number(paidRecord.amount || 9.9),
+        createdAt: paidRecord.createdAt || null,
+        paidAt: paidRecord.paidAt || paidRecord.createdAt || null
+      }
+    },
     upsertPurchaseRecord(payload) {
       if (!payload || !payload.orderNo) return
-      const key = this.getPurchaseOrderListKey()
-      const list = uni.getStorageSync(key) || []
+      const list = this.getPurchaseRecords()
       const index = list.findIndex(item => item.orderNo === payload.orderNo)
       const next = {
         orderNo: payload.orderNo,
@@ -407,7 +467,7 @@ export default {
         list.unshift(next)
       }
       list.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
-      uni.setStorageSync(key, list)
+      uni.setStorageSync(this.getPurchaseOrderListKey(), list)
     },
     ensurePurchaseRecordSynced() {
       if (!this.courseUnlock.orderNo) return
