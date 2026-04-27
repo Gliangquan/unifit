@@ -164,13 +164,24 @@
 import { request } from '@/common/request'
 import { ensureLogin, setUser } from '@/common/auth'
 
-const FALLBACK_ITEMS = [
-  { code: 'pull_up', name: '引体向上', unit: '次', direction: 'higher' },
-  { code: 'run_1000', name: '1000米跑', unit: '秒', direction: 'lower' },
-  { code: 'run_800', name: '800米跑', unit: '秒', direction: 'lower' },
-  { code: 'long_jump', name: '立定跳远', unit: 'cm', direction: 'higher' },
-  { code: 'sit_up', name: '仰卧起坐', unit: '次', direction: 'higher' }
-]
+const FALLBACK_ITEMS = {
+  male: [
+    { code: 'pull_up', name: '引体向上', unit: '次', direction: 'higher' },
+    { code: 'run_1000', name: '1000米跑', unit: '秒', direction: 'lower' },
+    { code: 'long_jump', name: '立定跳远', unit: 'cm', direction: 'higher' },
+    { code: 'vital_capacity', name: '肺活量', unit: 'ml', direction: 'higher' },
+    { code: 'run_50', name: '50米跑', unit: '秒', direction: 'lower' },
+    { code: 'sit_reach', name: '坐位体前屈', unit: 'cm', direction: 'higher' }
+  ],
+  female: [
+    { code: 'sit_up', name: '仰卧起坐', unit: '次', direction: 'higher' },
+    { code: 'run_800', name: '800米跑', unit: '秒', direction: 'lower' },
+    { code: 'long_jump', name: '立定跳远', unit: 'cm', direction: 'higher' },
+    { code: 'vital_capacity', name: '肺活量', unit: 'ml', direction: 'higher' },
+    { code: 'run_50', name: '50米跑', unit: '秒', direction: 'lower' },
+    { code: 'sit_reach', name: '坐位体前屈', unit: 'cm', direction: 'higher' }
+  ]
+}
 
 export default {
   data() {
@@ -227,6 +238,9 @@ export default {
     scorePlaceholder() {
       if (!this.currentItem) return '输入成绩值'
       return `输入成绩值（单位：${this.currentItem.unit}）`
+    },
+    currentGender() {
+      return (this.user && this.user.gender) || 'male'
     }
   },
   async onShow() {
@@ -251,7 +265,8 @@ export default {
       this.user = {
         ...localUser,
         ...latestUser,
-        token: localUser.token
+        token: localUser.token,
+        gender: latestUser.gender || localUser.gender || 'male'
       }
       setUser(this.user)
     },
@@ -291,7 +306,7 @@ export default {
         unit: item.scoreUnit || '值',
         direction: item.scoreDirection || 'higher'
       }))
-      this.items = mapped.length ? mapped : FALLBACK_ITEMS
+      this.items = mapped.length ? mapped : (FALLBACK_ITEMS[this.currentGender] || FALLBACK_ITEMS.male)
       if (!this.form.itemCode && this.items.length) {
         this.form.itemCode = this.items[0].code
       }

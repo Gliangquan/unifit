@@ -230,10 +230,83 @@ public class TestServiceImpl implements TestService {
     }
 
     @Override
-    public List<TestItem> listTestItems() {
+    public List<TestItem> listTestItems(User loginUser) {
         QueryWrapper<TestItem> qw = new QueryWrapper<>();
         qw.eq("status", 1).orderByAsc("id");
-        return testItemMapper.selectList(qw);
+        List<TestItem> items = testItemMapper.selectList(qw);
+        String gender = resolveGender(loginUser == null ? null : loginUser.getId());
+        if ("female".equalsIgnoreCase(gender)) {
+            return items.stream()
+                    .filter(item -> item != null && !"pull_up".equals(item.getItemCode()) && !"run_1000".equals(item.getItemCode()))
+                    .collect(Collectors.toList());
+        }
+        return items.stream()
+                .filter(item -> item != null && !"sit_up".equals(item.getItemCode()) && !"run_800".equals(item.getItemCode()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Map<String, Object> getScoreRulePreview(User loginUser, String itemCode) {
+        if (StringUtils.isBlank(itemCode)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "项目参数不完整");
+        }
+        ensureStudentVerified(loginUser);
+        String gender = resolveGender(loginUser.getId());
+        List<TestStandard> standards = listStandards(itemCode, gender);
+        if (standards.isEmpty() && !"male".equals(gender)) {
+            standards = listStandards(itemCode, "male");
+            gender = "male";
+        }
+        if (standards.isEmpty()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "未找到该项目的分档规则");
+        }
+
+        TestItem testItem = testItemMapper.selectOne(new QueryWrapper<TestItem>()
+                .eq("item_code", itemCode)
+                .eq("status", 1)
+                .last("limit 1"));
+        boolean lowerBetter = testItem != null && "lower".equalsIgnoreCase(testItem.getScoreDirection());
+
+        BigDecimal reasonableMin = standards.stream()
+                .map(TestStandard::getMinScore)
+                .filter(java.util.Objects::nonNull)
+                .min(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+        BigDecimal maxStandardMax = standards.stream()
+                .map(TestStandard::getMaxScore)
+                .filter(java.util.Objects::nonNull)
+                .max(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+        BigDecimal reasonableMax = resolveReasonableMax(itemCode, maxStandardMax, lowerBetter);
+
+        List<Map<String, Object>> ranges = new ArrayList<>();
+        List<TestStandard> sorted = new ArrayList<>(standards);
+        sorted.sort((a, b) -> {
+            BigDecimal aMin = a.getMinScore() == null ? BigDecimal.ZERO : a.getMinScore();
+            BigDecimal bMin = b.getMinScore() == null ? BigDecimal.ZERO : b.getMinScore();
+            return lowerBetter ? aMin.compareTo(bMin) : bMin.compareTo(aMin);
+        });
+        for (TestStandard standard : sorted) {
+            Map<String, Object> range = new HashMap<>();
+            range.put("minScore", standard.getMinScore());
+            range.put("maxScore", standard.getMaxScore());
+            range.put("standardPoint", standard.getStandardPoint());
+            range.put("standardLevel", standard.getLevel());
+            range.put("planLevel", mapStandardPointToPlanLevel(standard.getStandardPoint()));
+            range.put("label", buildRangeLabel(standard, lowerBetter));
+            ranges.add(range);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("itemCode", itemCode);
+        result.put("itemName", testItem == null ? itemCode : testItem.getItemName());
+        result.put("scoreUnit", testItem == null ? "" : testItem.getScoreUnit());
+        result.put("scoreDirection", testItem == null ? "higher" : testItem.getScoreDirection());
+        result.put("gender", gender);
+        result.put("reasonableMin", reasonableMin);
+        result.put("reasonableMax", reasonableMax);
+        result.put("ranges", ranges);
+        return result;
     }
 
     @Override
@@ -242,20 +315,61 @@ public class TestServiceImpl implements TestService {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "成绩参数不完整");
         }
         ensureStudentVerified(loginUser);
+
+        String gender = resolveGender(loginUser.getId());
         TestStandard matched = matchStandard(loginUser.getId(), itemCode, scoreValue);
+        if (matched == null && !"male".equals(gender)) {
+            matched = matchStandardByGender(itemCode, scoreValue, "male");
+            gender = "male";
+        }
+
+        List<TestStandard> standards = listStandards(itemCode, gender);
+        if (standards.isEmpty() && !"male".equals(gender)) {
+            standards = listStandards(itemCode, "male");
+            gender = "male";
+        }
+
+        TestItem testItem = testItemMapper.selectOne(new QueryWrapper<TestItem>()
+                .eq("item_code", itemCode)
+                .eq("status", 1)
+                .last("limit 1"));
+        boolean lowerBetter = testItem != null && "lower".equalsIgnoreCase(testItem.getScoreDirection());
+        BigDecimal maxStandardMax = standards.stream()
+                .map(TestStandard::getMaxScore)
+                .filter(java.util.Objects::nonNull)
+                .max(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+        BigDecimal reasonableMax = resolveReasonableMax(itemCode, maxStandardMax, lowerBetter);
+        BigDecimal reasonableMin = standards.stream()
+                .map(TestStandard::getMinScore)
+                .filter(java.util.Objects::nonNull)
+                .min(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+        boolean outOfRange = scoreValue.compareTo(reasonableMin) < 0 || scoreValue.compareTo(reasonableMax) > 0;
+
         Map<String, Object> result = new HashMap<>();
         result.put("itemCode", itemCode);
         result.put("scoreValue", scoreValue);
         result.put("level", mapStandardPointToPlanLevel(matched == null ? null : matched.getStandardPoint()));
         result.put("standardPoint", matched == null ? 0 : matched.getStandardPoint());
         result.put("standardLevel", matched == null ? "unknown" : matched.getLevel());
+        result.put("reasonableMin", reasonableMin);
+        result.put("reasonableMax", reasonableMax);
+        result.put("outOfRange", outOfRange);
+        result.put("message", outOfRange ? buildOutOfRangeMessage(testItem, reasonableMin, reasonableMax) : "");
         return result;
     }
 
     private TestStandard matchStandard(Long userId, String itemCode, BigDecimal scoreValue) {
-        HealthProfile profile = healthProfileMapper.selectOne(new QueryWrapper<HealthProfile>().eq("user_id", userId));
-        String gender = profile == null || profile.getGender() == null ? "male" : profile.getGender();
+        String gender = resolveGender(userId);
+        TestStandard matched = matchStandardByGender(itemCode, scoreValue, gender);
+        if (matched == null && !"male".equals(gender)) {
+            matched = matchStandardByGender(itemCode, scoreValue, "male");
+        }
+        return matched;
+    }
 
+    private TestStandard matchStandardByGender(String itemCode, BigDecimal scoreValue, String gender) {
         QueryWrapper<TestStandard> qw = new QueryWrapper<>();
         qw.eq("stage", "college")
                 .eq("item_code", itemCode)
@@ -265,6 +379,76 @@ public class TestServiceImpl implements TestService {
                 .orderByDesc("standard_point")
                 .last("limit 1");
         return testStandardMapper.selectOne(qw);
+    }
+
+    private List<TestStandard> listStandards(String itemCode, String gender) {
+        QueryWrapper<TestStandard> qw = new QueryWrapper<>();
+        qw.eq("stage", "college")
+                .eq("item_code", itemCode)
+                .eq("gender", gender)
+                .orderByDesc("standard_point");
+        return testStandardMapper.selectList(qw);
+    }
+
+    private String resolveGender(Long userId) {
+        if (userId == null) {
+            return "male";
+        }
+        HealthProfile profile = healthProfileMapper.selectOne(new QueryWrapper<HealthProfile>().eq("user_id", userId));
+        return profile == null || StringUtils.isBlank(profile.getGender()) ? "male" : profile.getGender();
+    }
+
+    private BigDecimal resolveReasonableMax(String itemCode, BigDecimal standardMax, boolean lowerBetter) {
+        if ("pull_up".equals(itemCode)) {
+            return BigDecimal.valueOf(40);
+        }
+        if ("sit_up".equals(itemCode)) {
+            return BigDecimal.valueOf(100);
+        }
+        if ("long_jump".equals(itemCode)) {
+            return BigDecimal.valueOf(400);
+        }
+        if ("vital_capacity".equals(itemCode)) {
+            return BigDecimal.valueOf(10000);
+        }
+        if ("sit_reach".equals(itemCode)) {
+            return BigDecimal.valueOf(50);
+        }
+        if ("run_50".equals(itemCode)) {
+            return BigDecimal.valueOf(20);
+        }
+        if ("run_800".equals(itemCode) || "run_1000".equals(itemCode)) {
+            return BigDecimal.valueOf(1200);
+        }
+        if (standardMax == null || standardMax.compareTo(BigDecimal.ZERO) <= 0) {
+            return lowerBetter ? BigDecimal.valueOf(9999) : BigDecimal.valueOf(999999);
+        }
+        return standardMax;
+    }
+
+    private String buildRangeLabel(TestStandard standard, boolean lowerBetter) {
+        if (standard == null) {
+            return "";
+        }
+        BigDecimal min = standard.getMinScore();
+        BigDecimal max = standard.getMaxScore();
+        if (lowerBetter) {
+            return formatScore(min) + " - " + formatScore(max);
+        }
+        return formatScore(min) + " - " + formatScore(max);
+    }
+
+    private String buildOutOfRangeMessage(TestItem testItem, BigDecimal reasonableMin, BigDecimal reasonableMax) {
+        String itemName = testItem == null ? "该项目" : testItem.getItemName();
+        String unit = testItem == null || StringUtils.isBlank(testItem.getScoreUnit()) ? "" : (" " + testItem.getScoreUnit());
+        return itemName + "成绩超出合理范围，请输入 " + formatScore(reasonableMin) + " - " + formatScore(reasonableMax) + unit;
+    }
+
+    private String formatScore(BigDecimal value) {
+        if (value == null) {
+            return "0";
+        }
+        return value.stripTrailingZeros().toPlainString();
     }
 
     private String mapStandardPointToPlanLevel(Integer standardPoint) {

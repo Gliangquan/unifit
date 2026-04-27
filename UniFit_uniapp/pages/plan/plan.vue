@@ -147,8 +147,17 @@
               <uni-icons type="medal" size="18" color="#64748b"></uni-icons>
               <text>当前成绩</text>
             </view>
-            <input class="form-input" v-model="form.currentScore" type="digit" :placeholder="currentScorePlaceholder" @input="syncScoreLevel" />
+            <input class="form-input" v-model="form.currentScore" type="text" :placeholder="currentScorePlaceholder" @input="syncScoreLevel" />
             <view class="field-hint" v-if="currentTestItemUnit">单位：{{ currentTestItemUnit }}</view>
+            <view class="field-hint">{{ currentScoreReasonableText }}</view>
+            <view v-if="currentScoreRangeList.length" class="score-rule-box">
+              <view class="score-rule-title">分档说明</view>
+              <view v-for="(range, index) in currentScoreRangeList" :key="`${form.testItemCode}_${index}`" class="score-rule-row">
+                <text class="score-rule-level">{{ scoreLevelText(range.planLevel) }}</text>
+                <text class="score-rule-range">{{ range.label }}</text>
+                <text class="score-rule-point">{{ range.standardPoint }}分</text>
+              </view>
+            </view>
           </view>
 
           <view class="form-row">
@@ -200,7 +209,7 @@
           </view>
 
           <view class="match-tip">
-            将按「项目 + 等级 + 训练基础 + 器械类型 + BMI范围 + 每周天数」匹配训练模板
+            将按「项目 + 分档 + 训练基础 + 器械类型 + BMI范围 + 每周天数」匹配训练模板
           </view>
 
           <view class="plan-popup-actions">
@@ -258,6 +267,7 @@ export default {
         daysPerWeek: '3',
         bmiValue: null
       },
+      scoreRuleMap: {},
       scoreLevelRequestId: 0,
       selectedTestItem: '',
       studentProfile: {},
@@ -288,6 +298,19 @@ export default {
     currentScorePlaceholder() {
       if (!this.currentTestItemUnit) return '请输入当前成绩'
       return `请输入当前成绩（${this.currentTestItemUnit}）`
+    },
+    currentScoreRule() {
+      return this.scoreRuleMap[this.form.testItemCode] || null
+    },
+    currentScoreReasonableText() {
+      const rule = this.currentScoreRule
+      if (!rule) return '将按高校体测分档自动判定'
+      const unit = rule.scoreUnit ? ` ${rule.scoreUnit}` : ''
+      return `合理成绩范围：${this.formatScoreValue(rule.reasonableMin)} - ${this.formatScoreValue(rule.reasonableMax)}${unit}`
+    },
+    currentScoreRangeList() {
+      const rule = this.currentScoreRule
+      return rule && Array.isArray(rule.ranges) ? rule.ranges : []
     },
     bmiRangeText() {
       const bmi = Number(this.form.bmiValue)
@@ -355,6 +378,25 @@ export default {
       if (!this.form.currentScore && this.currentTestItemUnit) {
         this.form.currentScore = ''
       }
+      await this.loadScoreRules()
+    },
+    async loadScoreRules() {
+      const nextMap = {}
+      for (const item of this.testItemOptions) {
+        if (!item || !item.itemCode) continue
+        try {
+          const rule = await request({
+            url: `/test/score/rule-preview?itemCode=${encodeURIComponent(item.itemCode)}`,
+            showError: false
+          })
+          if (rule) {
+            nextMap[item.itemCode] = rule
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      this.scoreRuleMap = nextMap
     },
     onTestItemChange(e) {
       const row = this.testItemOptions[Number(e.detail.value)]
@@ -375,11 +417,25 @@ export default {
     },
     async syncScoreLevel() {
       const rawScore = String(this.form.currentScore ?? '').trim()
-      const currentScore = Number(rawScore)
+      const normalizedScore = rawScore.replace(/[^\d.]/g, '')
+      if (normalizedScore !== rawScore) {
+        this.form.currentScore = normalizedScore
+      }
+      const currentScore = Number(normalizedScore)
       const requestId = ++this.scoreLevelRequestId
-      if (!this.form.testItemCode || !rawScore || !Number.isFinite(currentScore) || currentScore < 0) {
+      if (!this.form.testItemCode || !normalizedScore || !Number.isFinite(currentScore) || currentScore < 0) {
         this.form.scoreLevel = ''
         return
+      }
+      const rule = this.currentScoreRule
+      if (rule) {
+        const min = Number(rule.reasonableMin)
+        const max = Number(rule.reasonableMax)
+        if (Number.isFinite(min) && Number.isFinite(max) && (currentScore < min || currentScore > max)) {
+          this.form.scoreLevel = ''
+          uni.showToast({ title: `成绩超出合理范围：${this.formatScoreValue(rule.reasonableMin)}-${this.formatScoreValue(rule.reasonableMax)}`, icon: 'none' })
+          return
+        }
       }
       try {
         const preview = await request({
@@ -387,6 +443,11 @@ export default {
           showError: false
         })
         if (requestId !== this.scoreLevelRequestId) return
+        if (preview && preview.outOfRange) {
+          this.form.scoreLevel = ''
+          uni.showToast({ title: preview.message || '成绩超出合理范围', icon: 'none' })
+          return
+        }
         this.form.scoreLevel = (preview && preview.level) || ''
       } catch (e) {
         if (requestId !== this.scoreLevelRequestId) return
@@ -444,14 +505,27 @@ export default {
         return null
       }
       const rawScore = String(this.form.currentScore ?? '').trim()
-      if (!rawScore) {
+      const normalizedScore = rawScore.replace(/[^\d.]/g, '')
+      if (!normalizedScore) {
         uni.showToast({ title: '请先输入当前成绩', icon: 'none' })
         return null
       }
-      const currentScore = Number(rawScore)
+      if (normalizedScore !== rawScore) {
+        this.form.currentScore = normalizedScore
+      }
+      const currentScore = Number(normalizedScore)
       if (!Number.isFinite(currentScore) || currentScore < 0) {
         uni.showToast({ title: '请输入有效成绩', icon: 'none' })
         return null
+      }
+      const rule = this.currentScoreRule
+      if (rule) {
+        const min = Number(rule.reasonableMin)
+        const max = Number(rule.reasonableMax)
+        if (Number.isFinite(min) && Number.isFinite(max) && (currentScore < min || currentScore > max)) {
+          uni.showToast({ title: rule.message || `成绩需在${this.formatScoreValue(rule.reasonableMin)}-${this.formatScoreValue(rule.reasonableMax)}之间`, icon: 'none' })
+          return null
+        }
       }
       const scoreLevel = this.form.scoreLevel || this.resolveScoreLevel(currentScore)
       const daysPerWeek = Number(this.form.daysPerWeek)
@@ -515,11 +589,16 @@ export default {
           try {
             const purchaseResult = await request({ url: '/plan/purchase', method: 'POST', showError: false })
             const localUser = uni.getStorageSync('user') || {}
-            uni.setStorageSync('user', {
+            const nextUser = {
               ...localUser,
               balance: purchaseResult && purchaseResult.balance !== undefined ? purchaseResult.balance : localUser.balance,
-              planUnlocked: purchaseResult && purchaseResult.planUnlocked !== undefined ? purchaseResult.planUnlocked : localUser.planUnlocked
-            })
+              planUnlocked: purchaseResult && purchaseResult.planUnlocked !== undefined ? purchaseResult.planUnlocked : localUser.planUnlocked,
+              planUnlockTime: purchaseResult && purchaseResult.planUnlockTime !== undefined ? purchaseResult.planUnlockTime : localUser.planUnlockTime
+            }
+            this.user = nextUser
+            setUser(nextUser)
+            uni.setStorageSync('user', nextUser)
+            this.appendPlanAccessOrder(purchaseResult)
             let generatedPlan = await request({
               url: '/plan/generate',
               method: 'POST',
@@ -597,6 +676,24 @@ export default {
     cacheCurrentPlan(plan) {
       if (!plan) return
       uni.setStorageSync(this.getPlanCacheKey(), plan)
+    },
+    appendPlanAccessOrder(purchaseResult) {
+      const user = this.user || uni.getStorageSync('user') || {}
+      const uid = user.id || 'guest'
+      const key = `purchase_orders_${uid}`
+      const list = uni.getStorageSync(key) || []
+      const nextList = Array.isArray(list) ? list.slice() : []
+      nextList.unshift({
+        orderNo: `PLAN_ACCESS_${Date.now()}`,
+        type: 'plan_access',
+        typeText: '方案开通',
+        planName: '重新生成计划开通',
+        amount: purchaseResult && purchaseResult.cost !== undefined ? Number(purchaseResult.cost || 0) : 19.9,
+        status: 'paid',
+        createdAt: purchaseResult && purchaseResult.planUnlockTime ? purchaseResult.planUnlockTime : new Date().toISOString(),
+        paidAt: purchaseResult && purchaseResult.planUnlockTime ? purchaseResult.planUnlockTime : new Date().toISOString()
+      })
+      uni.setStorageSync(key, nextList)
     },
     readCachedPlan() {
       return uni.getStorageSync(this.getPlanCacheKey()) || null
@@ -686,6 +783,12 @@ export default {
         advanced: '强化档'
       }
       return map[value] || '待计算'
+    },
+    formatScoreValue(value) {
+      if (value === undefined || value === null || value === '') return '--'
+      const num = Number(value)
+      if (!Number.isFinite(num)) return String(value)
+      return Number.isInteger(num) ? String(num) : num.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')
     },
     fitnessLevelText(value) {
       const map = {
@@ -901,6 +1004,46 @@ export default {
 
 .field-hint {
   margin-top: 8rpx;
+  font-size: 22rpx;
+  color: $text-secondary;
+}
+
+.score-rule-box {
+  margin-top: 12rpx;
+  border: 1rpx solid $border-color;
+  border-radius: $radius-md;
+  background: #f8fafc;
+  padding: 12rpx 14rpx;
+}
+
+.score-rule-title {
+  font-size: 23rpx;
+  color: $text-primary;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.score-rule-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 8rpx 0;
+  border-bottom: 1rpx solid #e5e7eb;
+}
+
+.score-rule-row:last-child {
+  border-bottom: none;
+}
+
+.score-rule-level {
+  min-width: 90rpx;
+  font-size: 22rpx;
+  color: $primary-color;
+  font-weight: 600;
+}
+
+.score-rule-range,
+.score-rule-point {
   font-size: 22rpx;
   color: $text-secondary;
 }

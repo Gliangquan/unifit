@@ -97,6 +97,7 @@ public class PlanServiceImpl implements PlanService {
         if (request.getDaysPerWeek() < 1 || request.getDaysPerWeek() > 7) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "每周训练天数必须在1-7之间");
         }
+        validateReasonableScore(request.getTestItemCode(), request.getCurrentScore());
 
         User latest = userMapper.selectById(loginUser.getId());
         if (latest == null) {
@@ -106,6 +107,7 @@ public class PlanServiceImpl implements PlanService {
         if (!Integer.valueOf(1).equals(latest.getPlanUnlocked())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "请先购买方案后再生成训练计划");
         }
+        ensureRegenerationPaid(latest);
 
         String scoreLevel = calculateScoreLevel(latest.getId(), request);
         String bmiRange = resolveBmiRange(latest.getId(), request.getBmiValue());
@@ -230,32 +232,100 @@ public class PlanServiceImpl implements PlanService {
                 ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
                 : latest.getBalance().setScale(2, RoundingMode.HALF_UP);
 
-        if (Integer.valueOf(1).equals(latest.getPlanUnlocked())) {
-            return buildPurchaseResult(currentBalance, BigDecimal.ZERO, true);
-        }
-
         if (currentBalance.compareTo(PLAN_UNLOCK_PRICE) < 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "余额不足，请先模拟充值");
         }
 
         BigDecimal afterPay = currentBalance.subtract(PLAN_UNLOCK_PRICE).setScale(2, RoundingMode.HALF_UP);
+        Date unlockTime = new Date();
         latest.setBalance(afterPay);
         latest.setPlanUnlocked(1);
-        latest.setPlanUnlockTime(new Date());
+        latest.setPlanUnlockTime(unlockTime);
         int updated = userMapper.updateById(latest);
         if (updated <= 0) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "购买失败");
         }
-        return buildPurchaseResult(afterPay, PLAN_UNLOCK_PRICE, false);
+        archiveActivePlanAndRevokeAccess(latest.getId(), unlockTime);
+        return buildPurchaseResult(afterPay, PLAN_UNLOCK_PRICE, false, unlockTime);
     }
 
-    private Map<String, Object> buildPurchaseResult(BigDecimal balance, BigDecimal cost, boolean alreadyUnlocked) {
+    private Map<String, Object> buildPurchaseResult(BigDecimal balance, BigDecimal cost, boolean alreadyUnlocked, Date planUnlockTime) {
         Map<String, Object> result = new HashMap<>();
         result.put("planUnlocked", 1);
         result.put("balance", balance);
         result.put("cost", cost);
         result.put("alreadyUnlocked", alreadyUnlocked);
+        result.put("planUnlockTime", planUnlockTime);
         return result;
+    }
+
+    private void archiveActivePlanAndRevokeAccess(Long userId, Date updateTime) {
+        if (userId == null) {
+            return;
+        }
+        Date now = updateTime == null ? new Date() : updateTime;
+        UpdateWrapper<UserPlan> archiveUw = new UpdateWrapper<>();
+        archiveUw.eq("user_id", userId)
+                .eq("status", "active")
+                .set("status", "archived")
+                .set("update_time", now);
+        userPlanMapper.update(null, archiveUw);
+    }
+
+    private void ensureRegenerationPaid(User latest) {
+        if (latest == null || latest.getId() == null || latest.getPlanUnlockTime() == null) {
+            return;
+        }
+        UserPlan latestPlan = userPlanMapper.selectOne(new QueryWrapper<UserPlan>()
+                .eq("user_id", latest.getId())
+                .orderByDesc("id")
+                .last("limit 1"));
+        if (latestPlan == null || latestPlan.getCreateTime() == null) {
+            return;
+        }
+        if (latest.getPlanUnlockTime().after(latestPlan.getCreateTime())) {
+            return;
+        }
+        throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "重新生成计划需重新付费解锁");
+    }
+
+    private void validateReasonableScore(String testItemCode, BigDecimal scoreValue) {
+        if (StringUtils.isBlank(testItemCode) || scoreValue == null) {
+            return;
+        }
+        BigDecimal max = null;
+        switch (testItemCode) {
+            case "pull_up":
+                max = BigDecimal.valueOf(40);
+                break;
+            case "sit_up":
+                max = BigDecimal.valueOf(100);
+                break;
+            case "long_jump":
+                max = BigDecimal.valueOf(400);
+                break;
+            case "vital_capacity":
+                max = BigDecimal.valueOf(10000);
+                break;
+            case "sit_reach":
+                max = BigDecimal.valueOf(50);
+                break;
+            case "run_50":
+                max = BigDecimal.valueOf(20);
+                break;
+            case "run_800":
+            case "run_1000":
+                max = BigDecimal.valueOf(1200);
+                break;
+            default:
+                break;
+        }
+        if (scoreValue.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "成绩不能为负数");
+        }
+        if (max != null && scoreValue.compareTo(max) > 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "当前成绩超出合理范围，请重新输入");
+        }
     }
 
     private PlanTemplate pickTemplate(PlanGenerateRequest request, String scoreLevel, String bmiRange) {

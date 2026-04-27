@@ -18,11 +18,11 @@
           </view>
           <view class="row-between line">
             <text class="label">订单类型</text>
-            <text class="value">{{ item.typeText || '课程解锁' }}</text>
+            <text class="value">{{ item.typeText || '方案开通' }}</text>
           </view>
           <view class="row-between line">
-            <text class="label">关联计划</text>
-            <text class="value">{{ item.planName || '-' }}</text>
+            <text class="label">关联权益</text>
+            <text class="value">{{ item.planName || '全局训练计划' }}</text>
           </view>
           <view class="row-between line">
             <text class="label">订单金额</text>
@@ -81,6 +81,24 @@ export default {
       const userId = this.user.id || this.resolveLatestUserId()
       const walletKey = `wallet_transactions_${userId || 'guest'}`
       const walletRows = uni.getStorageSync(walletKey) || []
+      const orderRows = (Array.isArray(list) ? list : []).map(item => ({
+        ...item,
+        typeText: item.typeText || '方案开通',
+        planName: item.planName || '全局训练计划'
+      }))
+      const hasPlanAccessRecord = orderRows.some(item => item.type === 'plan_access' || item.typeText === '方案开通')
+      const planAccessRecord = Number(this.user.planUnlocked || 0) === 1 && !hasPlanAccessRecord
+        ? [{
+            orderNo: `PLAN_ACCESS_${userId || 'guest'}`,
+            type: 'plan_access',
+            typeText: '方案开通',
+            planName: '全局训练计划',
+            amount: 19.9,
+            status: 'paid',
+            createdAt: this.user.planUnlockTime || null,
+            paidAt: this.user.planUnlockTime || null
+          }]
+        : []
       const rechargeRecords = (Array.isArray(walletRows) ? walletRows : []).map((item, index) => ({
         orderNo: `RECHARGE_${index}_${item.time || item.createdAt || index}`,
         typeText: '钱包充值',
@@ -90,7 +108,7 @@ export default {
         createdAt: item.time || item.createdAt,
         paidAt: item.time || item.createdAt
       }))
-      this.records = (Array.isArray(list) ? list : []).concat(rechargeRecords).slice().sort((a, b) => Number(new Date(b.createdAt || 0).getTime() || 0) - Number(new Date(a.createdAt || 0).getTime() || 0))
+      this.records = orderRows.concat(planAccessRecord, rechargeRecords).slice().sort((a, b) => Number(new Date(b.createdAt || 0).getTime() || 0) - Number(new Date(a.createdAt || 0).getTime() || 0))
     },
     resolveLatestUserId() {
       const localUser = uni.getStorageSync('user') || {}

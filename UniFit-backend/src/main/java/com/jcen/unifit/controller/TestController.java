@@ -51,8 +51,16 @@ public class TestController {
     }
 
     @GetMapping("/items")
-    public BaseResponse<List<TestItem>> items() {
-        return ResultUtils.success(testService.listTestItems());
+    public BaseResponse<List<TestItem>> items(HttpServletRequest httpServletRequest) {
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        return ResultUtils.success(testService.listTestItems(loginUser));
+    }
+
+    @GetMapping("/score/rule-preview")
+    public BaseResponse<Map<String, Object>> scoreRulePreview(@RequestParam String itemCode,
+                                                              HttpServletRequest httpServletRequest) {
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        return ResultUtils.success(testService.getScoreRulePreview(loginUser, itemCode));
     }
 
     @GetMapping("/score/level-preview")

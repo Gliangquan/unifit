@@ -162,9 +162,18 @@ export default {
       const uid = this.user.id || (uni.getStorageSync('user') || {}).id || 'guest'
       return `purchase_orders_${uid}`
     },
+    getWalletTransactionKey() {
+      const uid = this.user.id || (uni.getStorageSync('user') || {}).id || 'guest'
+      return `wallet_transactions_${uid}`
+    },
     loadPurchaseRecordCount() {
       const list = uni.getStorageSync(this.getPurchaseOrderListKey()) || []
-      this.purchaseRecordCount = Array.isArray(list) ? list.length : 0
+      const walletRows = uni.getStorageSync(this.getWalletTransactionKey()) || []
+      const orderRows = Array.isArray(list) ? list : []
+      const rechargeCount = Array.isArray(walletRows) ? walletRows.length : 0
+      const hasPlanAccessRecord = orderRows.some(item => item && (item.type === 'plan_access' || item.typeText === '方案开通'))
+      const planAccessCount = Number(this.user.planUnlocked || 0) === 1 && !hasPlanAccessRecord ? 1 : 0
+      this.purchaseRecordCount = orderRows.length + rechargeCount + planAccessCount
     },
     async loadCurrentUser() {
       const latest = await request({ url: '/user/get/login', showError: false }) || {}
@@ -256,13 +265,6 @@ export default {
             if (currentUser.id) {
               const purchaseOrders = uni.getStorageSync(`purchase_orders_${currentUser.id}`)
               const walletTransactions = uni.getStorageSync(`wallet_transactions_${currentUser.id}`)
-              const courseUnlockKeys = []
-              const storageInfo = uni.getStorageInfoSync()
-              ;(storageInfo.keys || []).forEach(key => {
-                if (key.indexOf(`course_unlock_${currentUser.id}_`) === 0) {
-                  courseUnlockKeys.push({ key, value: uni.getStorageSync(key) })
-                }
-              })
               uni.clearStorageSync()
               if (purchaseOrders) {
                 uni.setStorageSync(`purchase_orders_${currentUser.id}`, purchaseOrders)
@@ -270,7 +272,6 @@ export default {
               if (walletTransactions) {
                 uni.setStorageSync(`wallet_transactions_${currentUser.id}`, walletTransactions)
               }
-              courseUnlockKeys.forEach(item => uni.setStorageSync(item.key, item.value))
             } else {
               uni.removeStorageSync('user')
             }

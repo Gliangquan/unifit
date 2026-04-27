@@ -19,7 +19,9 @@ public interface TestService {
 
     Map<String, Object> getClassCompare(User loginUser);
 
-    List<TestItem> listTestItems();
+    List<TestItem> listTestItems(User loginUser);
+
+    Map<String, Object> getScoreRulePreview(User loginUser, String itemCode);
 
     Map<String, Object> getScoreLevelPreview(User loginUser, String itemCode, BigDecimal scoreValue);
 }
