@@ -119,24 +119,17 @@ public class ExerciseServiceImpl implements ExerciseService {
     @Override
     public Page<Exercise> listExercises(long current, long pageSize, String keyword, String category, String difficulty) {
         QueryWrapper<Exercise> qw = new QueryWrapper<>();
+        qw.eq("status", 1);
         if (StringUtils.isNotBlank(keyword)) {
             qw.and(w -> w.like("name", keyword).or().like("description", keyword));
         }
         if (StringUtils.isNotBlank(category)) {
-            String normalizedCategory = normalizeCategory(category);
-            qw.and(w -> w.eq("category", category));
-            if (!normalizedCategory.equals(category)) {
-                qw.or().eq("category", normalizedCategory);
-            }
+            qw.eq("category", StringUtils.trim(category));
         }
         if (StringUtils.isNotBlank(difficulty)) {
-            String normalizedDifficulty = normalizeDifficulty(difficulty);
-            qw.and(w -> w.eq("difficulty", difficulty));
-            if (!normalizedDifficulty.equals(difficulty)) {
-                qw.or().eq("difficulty", normalizedDifficulty);
-            }
+            qw.eq("difficulty", StringUtils.trim(difficulty));
         }
-        qw.eq("status", 1).orderByAsc("id");
+        qw.orderByAsc("id");
         Page<Exercise> page = exerciseMapper.selectPage(new Page<>(current, pageSize), qw);
         fillPublishUserName(page.getRecords());
         return page;
