@@ -124,7 +124,16 @@ public class ExerciseServiceImpl implements ExerciseService {
             qw.and(w -> w.like("name", keyword).or().like("description", keyword));
         }
         if (StringUtils.isNotBlank(category)) {
-            qw.eq("category", StringUtils.trim(category));
+            List<String> categoryAliases = buildCategoryAliases(category);
+            qw.and(w -> {
+                for (int i = 0; i < categoryAliases.size(); i++) {
+                    if (i == 0) {
+                        w.eq("category", categoryAliases.get(i));
+                    } else {
+                        w.or().eq("category", categoryAliases.get(i));
+                    }
+                }
+            });
         }
         if (StringUtils.isNotBlank(difficulty)) {
             qw.eq("difficulty", StringUtils.trim(difficulty));
@@ -152,26 +161,22 @@ public class ExerciseServiceImpl implements ExerciseService {
                 .isNotNull("category")
                 .ne("category", "")
                 .orderByAsc("id"));
-        LinkedHashMap<String, String> options = new LinkedHashMap<>();
+        LinkedHashMap<String, Map<String, String>> options = new LinkedHashMap<>();
         for (Exercise exercise : exercises) {
             String raw = StringUtils.trimToEmpty(exercise.getCategory());
             if (StringUtils.isBlank(raw)) {
                 continue;
             }
             String normalized = normalizeCategory(raw);
-            if (StringUtils.isBlank(normalized)) {
+            if (StringUtils.isBlank(normalized) || options.containsKey(normalized)) {
                 continue;
             }
-            options.putIfAbsent(normalized, categoryLabel(normalized));
-        }
-        List<Map<String, String>> result = new ArrayList<>();
-        for (Map.Entry<String, String> entry : options.entrySet()) {
             Map<String, String> row = new HashMap<>();
-            row.put("value", entry.getKey());
-            row.put("label", entry.getValue());
-            result.add(row);
+            row.put("value", raw);
+            row.put("label", categoryLabel(normalized));
+            options.put(normalized, row);
         }
-        return result;
+        return new ArrayList<>(options.values());
     }
 
     @Override
@@ -505,6 +510,41 @@ public class ExerciseServiceImpl implements ExerciseService {
             default:
                 return difficulty.trim();
         }
+    }
+
+    private List<String> buildCategoryAliases(String category) {
+        List<String> aliases = new ArrayList<>();
+        String raw = StringUtils.trimToEmpty(category);
+        String normalized = normalizeCategory(raw);
+        if (StringUtils.isNotBlank(raw) && !aliases.contains(raw)) {
+            aliases.add(raw);
+        }
+        if (StringUtils.isNotBlank(normalized) && !aliases.contains(normalized)) {
+            aliases.add(normalized);
+        }
+        switch (normalized) {
+            case "上肢":
+                if (!aliases.contains("upper")) aliases.add("upper");
+                if (!aliases.contains("upper_body")) aliases.add("upper_body");
+                break;
+            case "下肢":
+                if (!aliases.contains("lower")) aliases.add("lower");
+                if (!aliases.contains("lower_body")) aliases.add("lower_body");
+                break;
+            case "核心":
+                if (!aliases.contains("core")) aliases.add("core");
+                break;
+            case "有氧":
+                if (!aliases.contains("cardio")) aliases.add("cardio");
+                if (!aliases.contains("aerobic")) aliases.add("aerobic");
+                break;
+            case "恢复":
+                if (!aliases.contains("recovery")) aliases.add("recovery");
+                break;
+            default:
+                break;
+        }
+        return aliases;
     }
 
     private String categoryLabel(String category) {

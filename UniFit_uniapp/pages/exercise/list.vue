@@ -92,10 +92,10 @@ const defaultCategoryOptions = [
 
 const difficultyOptions = [
   { label: '全部等级', value: '' },
-  { label: '零基础', value: '零基础' },
-  { label: '初级', value: '初级' },
-  { label: '进阶', value: '进阶' },
-  { label: '强化', value: '强化' }
+  { label: '零基础', value: 'newbie' },
+  { label: '初级', value: 'beginner' },
+  { label: '进阶', value: 'intermediate' },
+  { label: '强化', value: 'advanced' }
 ]
 
 export default {
