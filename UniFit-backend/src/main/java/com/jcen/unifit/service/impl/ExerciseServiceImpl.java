@@ -124,16 +124,7 @@ public class ExerciseServiceImpl implements ExerciseService {
             qw.and(w -> w.like("name", keyword).or().like("description", keyword));
         }
         if (StringUtils.isNotBlank(category)) {
-            List<String> categoryAliases = buildCategoryAliases(category);
-            qw.and(w -> {
-                for (int i = 0; i < categoryAliases.size(); i++) {
-                    if (i == 0) {
-                        w.eq("category", categoryAliases.get(i));
-                    } else {
-                        w.or().eq("category", categoryAliases.get(i));
-                    }
-                }
-            });
+            qw.in("category", buildCategoryAliases(category));
         }
         if (StringUtils.isNotBlank(difficulty)) {
             qw.eq("difficulty", StringUtils.trim(difficulty));
